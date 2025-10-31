@@ -50,18 +50,78 @@ async function main() {
 
   const dataDir = path.join(__dirname, "..", "data");
 
-  console.log("Loading dimensions...");
-  await bulkInsert("dates", ["date_id","year_no","month_no","day_no"], readCSV(path.join(dataDir,"dates.csv")));
-  await bulkInsert("customers", ["customer_id","customer_name","created_at"], readCSV(path.join(dataDir,"customers.csv")));
-  await bulkInsert("styles", ["style_id","style_name"], readCSV(path.join(dataDir,"styles.csv")));
-  await bulkInsert("sizes", ["size_id","size_label"], readCSV(path.join(dataDir,"sizes.csv")));
-  await bulkInsert("product_variants", ["product_variant_id","sku","style_id","size_id"], readCSV(path.join(dataDir,"product_variants.csv")));
+  // --- Load product category translations ---
+  console.log("Loading product categories...");
+  await bulkInsert(
+    "product_category_translation",
+    ["product_category_name", "product_category_name_english"],
+    readCSV(path.join(dataDir, "product_category_name_translation.csv"))
+  );
 
-  console.log("Loading fact sales...");
-  await bulkInsert("sales", ["date_id","customer_id","product_variant_id","pcs","rate","gross_amt"], readCSV(path.join(dataDir,"sales.csv")));
+  // --- Load products ---
+  console.log("Loading products...");
+  await bulkInsert(
+    "products",
+    ["product_id","product_category_name","product_name_length","product_description_length","product_photos_qty",
+     "product_weight_g","product_length_cm","product_height_cm","product_width_cm"],
+    readCSV(path.join(dataDir, "olist_products_dataset.csv"))
+  );
 
-  console.log("Done seeding Postgres ✅");
+  // --- Load sellers ---
+  console.log("Loading sellers...");
+  await bulkInsert(
+    "sellers",
+    ["seller_id","seller_zip_code_prefix","seller_city","seller_state"],
+    readCSV(path.join(dataDir, "olist_sellers_dataset.csv"))
+  );
+
+  // --- Load customers ---
+  console.log("Loading customers...");
+  await bulkInsert(
+    "customers",
+    ["customer_id","customer_unique_id","customer_zip_code_prefix","customer_city","customer_state"],
+    readCSV(path.join(dataDir, "olist_customers_dataset.csv"))
+  );
+
+  // --- Load orders ---
+  console.log("Loading orders...");
+  await bulkInsert(
+    "orders",
+    ["order_id","customer_id","order_status","order_purchase_timestamp","order_approved_at",
+     "order_delivered_carrier_date","order_delivered_customer_date","order_estimated_delivery_date"],
+    readCSV(path.join(dataDir, "olist_orders_dataset.csv"))
+  );
+
+  // --- Load order_items ---
+  console.log("Loading order items...");
+  await bulkInsert(
+    "order_items",
+    ["order_id","order_item_id","product_id","seller_id","shipping_limit_date","price","freight_value"],
+    readCSV(path.join(dataDir, "olist_order_items_dataset.csv"))
+  );
+
+  // --- Load order_payments ---
+  console.log("Loading order payments...");
+  await bulkInsert(
+    "order_payments",
+    ["order_id","payment_sequential","payment_type","payment_installments","payment_value"],
+    readCSV(path.join(dataDir, "olist_order_payments_dataset.csv"))
+  );
+
+  // --- Load order_reviews ---
+  console.log("Loading order reviews...");
+  await bulkInsert(
+    "order_reviews",
+    ["review_id","order_id","review_score","review_comment_title","review_comment_message",
+     "review_creation_date","review_answer_timestamp"],
+    readCSV(path.join(dataDir, "olist_order_reviews_dataset.csv"))
+  );
+
+  console.log("✅ All CSVs loaded successfully into PostgreSQL!");
   await pool.end();
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(err => {
+  console.error("❌ Error during seeding:", err);
+  process.exit(1);
+});
