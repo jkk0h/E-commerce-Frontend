@@ -1,14 +1,1 @@
-{
-  "name": "e-commerce-frontend",
-  "version": "1.0.0",
-  "description": "Combined Frontend and API Server",
-  "main": "server.js",
-  "type": "module",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "pg": "^8.12.0"
-  }
-}
+{ "type":"module", "scripts":{ "start":"node server.js" }, "dependencies":{ "express":"^4.19.2" } }
