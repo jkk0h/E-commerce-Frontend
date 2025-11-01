@@ -25,21 +25,24 @@ app.get("/diagnostics", async (_req, res) => {
   }
 });
 
-app.get("/api/products", async (_req, res) => {
+app.get("/api/products/:id", async (req, res) => {
     try {
-        // Check if mongoDb connection exists (from connectAll)
+        const productId = req.params.id;
         if (!mongoDb) {
             return res.status(503).json({ error: "MongoDB connection not available." });
         }
 
-        // Fetch all documents from the 'products' collection
-        const products = await mongoDb.collection("products").find({}).toArray();
+        // Fetch the product using the ID. Adjust 'product_id' if your collection uses a different key.
+        const product = await mongoDb.collection("products").findOne({ product_id: productId });
+        
+        if (!product) {
+            return res.status(404).json({ error: "Product not found" });
+        }
 
-        // Respond with the products array
-        res.json(products);
+        res.json(product);
     } catch (e) {
-        console.error("Error fetching products:", e);
-        res.status(500).json({ error: "Failed to retrieve products from database." });
+        console.error("Error fetching single product:", e);
+        res.status(500).json({ error: "Failed to retrieve product details." });
     }
 });
 
