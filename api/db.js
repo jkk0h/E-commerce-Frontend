@@ -11,9 +11,9 @@ export async function connectAll() {
 
   // 👇 CHANGE THIS LINE
   // Use MONGO_URL, which Railway automatically sets, instead of MONGODB_URI
-  const mongoClient = new MongoClient(process.env.MONGO_URI); 
+  const mongoClient = new MongoClient(process.env.MONGODB_URI); // Uses the public MONGODB_URI
   await mongoClient.connect();
-  const mongoDb = mongoClient.db(process.env.MONGO_DB_NAME || "appdb");
+  // const mongoDb = mongoClient.db(process.env.MONGO_DB_NAME || "appdb");
 
   return { pgPool, mongoDb, mongoClient };
 }
