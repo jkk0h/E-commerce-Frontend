@@ -23,17 +23,21 @@ const dataDir = path.resolve(__dirname, "data");
 
 /* ---------------- CSV utils: normalize header once ---------------- */
 
+// strip BOM, outer quotes, lowercase, trim, spaces->underscore
 function normKey(s) {
   return (s || "")
-    .replace(/^\uFEFF/, "")   // strip BOM
+    .replace(/^\uFEFF/, "")      // strip BOM
+    .replace(/^"+|"+$/g, "")     // strip wrapping double quotes
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, "_");    // collapse spaces -> underscore
+    .replace(/\s+/g, "_");       // collapse spaces -> underscore
 }
 
+// split, trim, and de-quote each cell (Olist has no quoted commas)
 function splitCSVLine(line) {
-  // Olist CSVs are simple (no quoted commas). If needed, switch to a CSV lib.
-  return line.split(",").map(s => s.trim());
+  return line
+    .split(",")
+    .map(s => s.trim().replace(/^"+|"+$/g, "")); // dequote cell values
 }
 
 function readCSV(file) {
@@ -164,7 +168,7 @@ async function main() {
     { ints: INT_SELLERS }
   );
 
-  // customers (now safe; keys normalized)
+  // customers
   console.log("Loading customers...");
   const customersAll = readCSV(path.join(dataDir, "olist_customers_dataset.csv"));
   console.log("Sample customer keys:", Object.keys(customersAll[0] || {}));
