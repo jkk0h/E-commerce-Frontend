@@ -25,6 +25,24 @@ app.get("/diagnostics", async (_req, res) => {
   }
 });
 
+app.get("/api/products", async (_req, res) => {
+    try {
+        if (!mongoDb) {
+            // Return 503 Service Unavailable if the database connection failed
+            return res.status(503).json({ error: "MongoDB connection not available." });
+        }
+
+        // Fetch all documents from the 'products' collection
+        const products = await mongoDb.collection("products").find({}).toArray();
+
+        // Respond with the products array (even if it's empty: [])
+        res.json(products);
+    } catch (e) {
+        console.error("Error fetching products:", e);
+        res.status(500).json({ error: "Failed to retrieve products from database." });
+    }
+});
+
 app.get("/api/products/:id", async (req, res) => {
     try {
         const productId = req.params.id;
