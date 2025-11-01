@@ -103,18 +103,27 @@ async function main() {
   await runSQL(path.resolve(__dirname, "schema.sql"));
 
   console.log("Loading product categories...");
+  const categoryRows = readCSV(path.join(dataDir, "product_category_name_translation.csv"));
   await bulkInsert(
     "product_category_translation",
     ["product_category_name", "product_category_name_english"],
-    readCSV(path.join(dataDir, "product_category_name_translation.csv"))
+    categoryRows
   );
 
-  console.log("Loading products...");
+  // ------- Option 1: filter products by known categories -------
+  console.log("Loading products (filtering unknown categories)...");
+  const productsAll = readCSV(path.join(dataDir, "olist_products_dataset.csv"));
+  const categorySet = new Set(categoryRows.map(c => c.product_category_name).filter(Boolean));
+  const productsFiltered = productsAll.filter(p =>
+    !p.product_category_name || categorySet.has(p.product_category_name)
+  );
+  console.log(`Products total: ${productsAll.length} | inserting: ${productsFiltered.length} | dropped: ${productsAll.length - productsFiltered.length}`);
+
   await bulkInsert(
     "products",
     ["product_id","product_category_name","product_name_length","product_description_length","product_photos_qty",
      "product_weight_g","product_length_cm","product_height_cm","product_width_cm"],
-    readCSV(path.join(dataDir, "olist_products_dataset.csv")),
+    productsFiltered,
     { ints: INT_PRODUCTS }
   );
 
