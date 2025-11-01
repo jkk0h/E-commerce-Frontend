@@ -28,10 +28,10 @@
 
     async function loadProducts() {
       try {
-        const res = await fetch(`${API_URL}/api/products`);
+        const res = await fetch(`${API_URL}api/products`);
         if (!res.ok) {
           // Helpful message if Mongo route is off/503
-          throw new Error(`HTTP ${res.status}. Is /api/products enabled and CORS whitelisted? API = ${API_URL}`);
+          throw new Error(`HTTP ${res.status}. Is api/products enabled and CORS whitelisted? API = ${API_URL}`);
         }
         const data = await res.json();
 
