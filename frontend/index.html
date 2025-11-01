@@ -1,23 +1,45 @@
-<script>
-    // FIX: Set API to an empty string ("") to use the current domain.
-    // This connects to the service hosting this HTML page:
-    // https://e-commerce-frontend-production-f9c0.up.railway.app/api/products
-    const API = ""; 
+<!DOCTYPE html>
+<html>
+<head>
+    <title>E-Commerce Demo</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .product { padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; border-radius: 6px; }
+    </style>
+</head>
+<body>
 
-    async function loadProducts(){
-      const res = await fetch(`${API}/api/products`);
-      
-      if (!res.ok) {
-          // If this still fails, your frontend server.js file is not handling the route.
-          console.error(`Fetch failed with status: ${res.status}. Check your 'frontend/server.js' route definitions.`);
-          throw new Error(`HTTP error: ${res.status}`); 
-      }
-
-      const products = await res.json();
-      console.log(products);
-      // TODO: render products into the page
-    }
+    <h1>E-Commerce Catalog</h1>
+    <p>Products loaded from API (MongoDB)</p>
     
-    // Call the function and catch errors gracefully
-    loadProducts().catch(e => console.error("Could not load products:", e));
-</script>
+    <div id="products"></div>
+
+    <script>
+        // IMPORTANT:
+        // replace your-api-url below when your API is deployed on Railway
+        const API_URL = "https://<YOUR-API-SERVICE>.up.railway.app";
+
+        async function loadProducts(){
+            const res = await fetch(`${API_URL}/api/products`);
+            const data = await res.json();
+
+            const container = document.getElementById('products');
+            container.innerHTML = "";
+
+            data.forEach(p => {
+                const div = document.createElement("div");
+                div.className = "product";
+                div.innerHTML = `
+                    <b>${p.title}</b><br>
+                    SKU: ${p.sku}<br>
+                    Price: $${p.price}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        loadProducts();
+    </script>
+
+</body>
+</html>
