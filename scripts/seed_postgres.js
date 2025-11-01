@@ -214,15 +214,33 @@ async function main() {
     { dates: DATE_ORDERS }
   );
 
-  // order items
-  console.log("Loading order items...");
-  const itemsAll = readCSV(path.join(dataDir, "olist_order_items_dataset.csv"));
-  await bulkInsert(
-    "order_items",
-    ["order_id","order_item_id","product_id","seller_id","shipping_limit_date","price","freight_value"],
-    itemsAll,
-    { ints: INT_ITEMS, floats: FLOAT_ITEMS, dates: new Set(["shipping_limit_date"]) }
-  );
+// order items — pre-filter to existing orders/products/sellers to avoid FK errors
+console.log("Loading order items...");
+const itemsAll = readCSV(path.join(dataDir, "olist_order_items_dataset.csv"));
+
+// Build existence sets from what we actually inserted above
+const orderIdSet   = new Set(ordersFiltered.map(o => o.order_id));
+const productIdSet = new Set(productsFiltered.map(p => p.product_id));
+// We didn't filter sellers, so all were inserted:
+const sellerIdSet  = new Set(sellersAll.map(s => s.seller_id));
+
+// Keep only valid foreign-key rows
+const itemsFiltered = itemsAll.filter(r =>
+  r.order_id && orderIdSet.has(r.order_id) &&
+  r.product_id && productIdSet.has(r.product_id) &&
+  r.seller_id && sellerIdSet.has(r.seller_id)
+);
+
+const droppedItems = itemsAll.length - itemsFiltered.length;
+console.log(`Order items total: ${itemsAll.length} | inserting: ${itemsFiltered.length} | dropped (FK-miss): ${droppedItems}`);
+
+await bulkInsert(
+  "order_items",
+  ["order_id","order_item_id","product_id","seller_id","shipping_limit_date","price","freight_value"],
+  itemsFiltered,
+  { ints: INT_ITEMS, floats: FLOAT_ITEMS, dates: new Set(["shipping_limit_date"]) }
+);
+
 
   // payments
   console.log("Loading order payments...");
