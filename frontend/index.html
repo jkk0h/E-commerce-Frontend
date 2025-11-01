@@ -1,36 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>The Next-Gen Store</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 The Next-Gen Store 🛒</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; }
-        h1 { color: #343a40; }
-        .error { color: #b00020; font-weight: 600; padding: 10px; border: 1px solid #b00020; background: #ffefef; border-radius: 6px; }
-
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
         /* --- Product Grid Styling --- */
         #products {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+            gap: 24px; /* Increased gap */
+            margin-top: 24px;
         }
         .product { 
             padding: 0; 
-            border: 1px solid #dee2e6; 
+            border: 1px solid #e5e7eb; /* Light border */
             border-radius: 8px; 
             overflow: hidden; 
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
             transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            background-color: white;
         }
         .product:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
         }
         .product-image {
             background: #e9ecef;
@@ -42,27 +45,21 @@
             color: #6c757d;
         }
         .product-info {
-            padding: 15px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             flex-grow: 1;
         }
-        .product-title {
-            font-weight: bold;
-            font-size: 1.1em;
-            margin-bottom: 5px;
-            color: #343a40;
-        }
         .product-price {
             font-weight: bold;
-            color: #28a745;
+            color: #10b981; /* Tailwind green-500 */
             font-size: 1.3em;
             margin-top: 10px;
         }
 
-        /* --- Modal Styling --- */
+        /* --- Modal Styling --- (using Tailwind classes where possible) */
         .modal {
-            display: none; /* Hidden by default */
+            display: none;
             position: fixed;
             z-index: 1000;
             left: 0;
@@ -70,64 +67,40 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto; /* 10% from the top and centered */
-            padding: 25px;
-            border: 1px solid #888;
-            width: 80%; /* Could be more or less, depending on screen size */
-            max-width: 600px;
-            border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: #000;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .add-to-cart {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.1em;
-            margin-top: 20px;
-        }
-        .add-to-cart:hover {
-            background-color: #0056b3;
+            background-color: rgba(0,0,0,0.4);
         }
     </style>
 </head>
-<body>
-    <h1>🌟 The Next-Gen Store 🛒</h1>
-    <p>Discover our latest collection of curated products.</p>
+<body class="p-6">
+    
+    <div class="absolute top-6 right-6 z-10">
+        <a href="e-commerce-dashboard.html" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 shadow-lg">
+            Go to Dashboard 📈
+        </a>
+    </div>
 
-    <div id="products">Loading…</div>
+    <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-2xl">
+        <h1 class="text-4xl font-extrabold text-center text-indigo-600 mb-2">🌟 The Next-Gen Store 🛒</h1>
+        <p class="text-center text-gray-500 mb-10 max-w-2xl mx-auto">Discover our latest collection of curated products loaded from the API.</p>
+
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-6 rounded-lg mb-8 shadow-inner">
+            <h2 class="text-3xl font-bold mb-4 text-green-800">Available Products</h2>
+            <div id="products">Loading…</div>
+        </div>
+    </div>
 
     <div id="productModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Product Details</h2>
-            <div id="modalDetails">Loading product details...</div>
-            <button class="add-to-cart" id="addToCartButton">Add to Cart</button>
-            <p style="font-size: 0.8em; margin-top: 10px;">(This is a demonstration. Cart functionality is not implemented.)</p>
+        <div class="modal-content bg-white p-8 rounded-xl shadow-2xl relative top-20 mx-auto w-11/12 max-w-xl">
+            <span class="close text-gray-500 hover:text-gray-900 absolute top-3 right-5 text-3xl font-bold cursor-pointer">&times;</span>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Product Details</h2>
+            <div id="modalDetails" class="text-gray-600">Loading product details...</div>
+            <button class="add-to-cart bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-6 rounded-full font-semibold transition-colors duration-300 mt-6" id="addToCartButton">Add to Cart</button>
+            <p class="text-xs text-gray-400 mt-2">(Cart functionality is a demonstration placeholder.)</p>
         </div>
     </div>
 
     <script>
-        // IMPORTANT: Ensure this URL matches your API Service (The one that runs server.js in the 'api' folder)
-        // **DO NOT** use the frontend's own URL here unless your frontend is also your API.
+        // IMPORTANT: Use the correct, fixed API URL (ending with a slash)
         const API_URL = "https://e-commerce-frontend-production-f9c0.up.railway.app/"; 
 
         const container = document.getElementById("products");
@@ -137,22 +110,19 @@
         const cartBtn = document.getElementById("addToCartButton");
 
         // --- Event Listeners for Modal ---
-        closeBtn.onclick = function() {
-            modal.style.display = "none";
-        }
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
+        closeBtn.onclick = function() { modal.style.display = "none"; }
+        window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
         cartBtn.onclick = function() {
             alert(`Added item to cart! (Placeholder function)`);
             modal.style.display = "none";
         }
 
-
+        // --- Error Display Function (Styled) ---
         function displayError(message) {
-            container.innerHTML = `<div class="error">Error loading products: ${message}</div>`;
+            container.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
+                <p class="font-bold">Error Loading Catalog</p>
+                <p>${message}</p>
+            </div>`;
         }
         
         // --- Fetch Details for Modal ---
@@ -160,9 +130,8 @@
             modalDetails.innerHTML = "Loading...";
             modal.style.display = "block";
 
-            // NOTE: You MUST ensure your API has a route like /api/products/B000000001
             try {
-                // *** FIX APPLIED HERE: API_URL already has a trailing slash, so we don't add one. ***
+                // *** FIX: API_URL + 'api/products/' + ID ***
                 const res = await fetch(`${API_URL}api/products/${productId}`);
                 
                 if (!res.ok) {
@@ -171,53 +140,66 @@
                 const p = await res.json();
                 
                 const title = p.title || p.product_category_name || "Untitled Product";
-                const price = p.price != null ? `$${p.price.toFixed(2)}` : "Price TBD";
+                const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "Price TBD";
                 const description = p.product_description || p.review_comment || "No detailed description available.";
 
                 modalDetails.innerHTML = `
-                    <h3>${title}</h3>
-                    <p><strong>SKU:</strong> ${p.sku || p.product_id || "N/A"}</p>
-                    <p><strong>Price:</strong> <span style="color:#007bff; font-size:1.4em;">${price}</span></p>
-                    <hr>
+                    <h3 class="text-xl font-semibold mb-2">${title}</h3>
+                    <p class="text-sm"><strong>SKU:</strong> ${p.sku || p.product_id || "N/A"}</p>
+                    <p class="text-3xl font-extrabold text-indigo-600 my-3">${price}</p>
+                    <hr class="my-4">
                     <p>${description}</p>
                 `;
 
             } catch (err) {
-                modalDetails.innerHTML = `<p class="error">Failed to load details: ${err.message}</p>`;
+                modalDetails.innerHTML = `<p class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">Failed to load details: ${err.message}</p>`;
                 console.error("Error fetching product details:", err);
             }
         }
 
         // --- Load Product Grid ---
         async function loadProducts() {
+            container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">
+                                       <svg class="animate-spin h-5 w-5 mr-3 inline text-indigo-600" viewBox="0 0 24 24"></svg>
+                                       Loading Products...
+                                   </div>`;
+
             try {
-                // *** FIX APPLIED HERE: API_URL already has a trailing slash, so we don't add one. ***
+                // *** FIX: Correct API URL construction ***
                 const res = await fetch(`${API_URL}api/products`);
                 
                 if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}. Check your API deployment and routing.`);
+                    throw new Error(`HTTP ${res.status}. Check your API deployment.`);
                 }
                 const data = await res.json();
 
                 container.innerHTML = "";
+                
+                // --- Empty Catalog Message (Styled) ---
                 if (!data || data.length === 0) {
-                    container.innerHTML = "<p>Catalog is empty. Check your database connection/seeding.</p>";
+                    container.innerHTML = `<div class="col-span-full bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-6 rounded-lg text-center">
+                        <p class="text-xl font-bold">Oops! Our shelves are empty right now. 😔</p>
+                        <p>We're currently stocking the store. Please check back later!</p>
+                    </div>`;
                     return;
                 }
                 
+                // --- Render Products ---
                 (data || []).forEach(p => {
                     const div = document.createElement("div");
                     div.className = "product";
-                    // Store the product ID for the click handler
                     div.dataset.productId = p.sku || p.product_id; 
 
                     const title = p.title || p.product_category_name || "Untitled";
-                    const price = p.price != null ? `$${p.price.toFixed(2)}` : "(no price)";
+                    const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "(no price)";
                     
                     div.innerHTML = `
-                        <div class="product-image">Product Image Placeholder</div>
+                        <div class="product-image">
+                            [Product Image Placeholder]
+                        </div>
                         <div class="product-info">
-                            <span class="product-title">${title}</span>
+                            <span class="text-lg font-semibold text-gray-800">${title}</span>
+                            <span class="text-sm text-gray-500 mb-2">SKU: ${p.sku || p.product_id || "N/A"}</span>
                             <span class="product-price">${price}</span>
                         </div>
                     `;
