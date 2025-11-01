@@ -84,12 +84,15 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// This assumes your static files (index.html, assets, etc.) are in the root or a 'public' folder 
-// relative to where this server.js file is running.
-app.use(express.static(path.join(__dirname, '../frontend'))); // Adjust path as necessary to point to your static assets
+// 1. Serve static assets (images, CSS, JS bundles)
+app.use(express.static(path.join(__dirname, '../frontend'))); 
 
-
-// --- D. START SERVER ---
-app.listen(port, "0.0.0.0", () => {
-    console.log("Frontend/API server running on", port);
+// 2. Add a catch-all route *after* static serving and *after* API routes.
+// This ensures that any request not handled by your API routes (like a direct URL
+// to /products or /checkout) serves the main index.html file, which is necessary for SPAs.
+app.get('*', (req, res) => {
+    // Check if the request is for the API, if not, serve index.html
+    if (!req.url.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+    }
 });
