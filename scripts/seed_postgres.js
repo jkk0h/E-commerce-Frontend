@@ -214,33 +214,27 @@ async function main() {
     { dates: DATE_ORDERS }
   );
 
-// order items — pre-filter to existing orders/products/sellers to avoid FK errors
-console.log("Loading order items...");
-const itemsAll = readCSV(path.join(dataDir, "olist_order_items_dataset.csv"));
+  /* -------- existence sets (define ONCE, reuse below) -------- */
+  const orderIdSet   = new Set(ordersFiltered.map(o => o.order_id));
+  const productIdSet = new Set(productsFiltered.map(p => p.product_id));
+  const sellerIdSet  = new Set(sellersAll.map(s => s.seller_id));
 
-// Build existence sets from what we actually inserted above
-const orderIdSet   = new Set(ordersFiltered.map(o => o.order_id));
-const productIdSet = new Set(productsFiltered.map(p => p.product_id));
-// We didn't filter sellers, so all were inserted:
-const sellerIdSet  = new Set(sellersAll.map(s => s.seller_id));
-
-// Keep only valid foreign-key rows
-const itemsFiltered = itemsAll.filter(r =>
-  r.order_id && orderIdSet.has(r.order_id) &&
-  r.product_id && productIdSet.has(r.product_id) &&
-  r.seller_id && sellerIdSet.has(r.seller_id)
-);
-
-const droppedItems = itemsAll.length - itemsFiltered.length;
-console.log(`Order items total: ${itemsAll.length} | inserting: ${itemsFiltered.length} | dropped (FK-miss): ${droppedItems}`);
-
-await bulkInsert(
-  "order_items",
-  ["order_id","order_item_id","product_id","seller_id","shipping_limit_date","price","freight_value"],
-  itemsFiltered,
-  { ints: INT_ITEMS, floats: FLOAT_ITEMS, dates: new Set(["shipping_limit_date"]) }
-);
-
+  // order items — pre-filter to existing orders/products/sellers to avoid FK errors
+  console.log("Loading order items...");
+  const itemsAll = readCSV(path.join(dataDir, "olist_order_items_dataset.csv"));
+  const itemsFiltered = itemsAll.filter(r =>
+    r.order_id && orderIdSet.has(r.order_id) &&
+    r.product_id && productIdSet.has(r.product_id) &&
+    r.seller_id && sellerIdSet.has(r.seller_id)
+  );
+  const droppedItems = itemsAll.length - itemsFiltered.length;
+  console.log(`Order items total: ${itemsAll.length} | inserting: ${itemsFiltered.length} | dropped (FK-miss): ${droppedItems}`);
+  await bulkInsert(
+    "order_items",
+    ["order_id","order_item_id","product_id","seller_id","shipping_limit_date","price","freight_value"],
+    itemsFiltered,
+    { ints: INT_ITEMS, floats: FLOAT_ITEMS, dates: new Set(["shipping_limit_date"]) }
+  );
 
   // payments
   console.log("Loading order payments...");
@@ -252,52 +246,44 @@ await bulkInsert(
     { ints: INT_PAYMENTS, floats: FLOAT_PAYMENTS }
   );
 
-// order reviews — keep rows that reference existing orders, have a review_id,
-// coerce dates, and ensure score is 1..5
-console.log("Loading order reviews...");
-const reviewsAll = readCSV(path.join(dataDir, "olist_order_reviews_dataset.csv"));
+  // order reviews — keep rows that reference existing orders, have a review_id,
+  // coerce dates, and ensure score is 1..5
+  console.log("Loading order reviews...");
+  const reviewsAll = readCSV(path.join(dataDir, "olist_order_reviews_dataset.csv"));
+  const reviewsFiltered = reviewsAll.filter(r =>
+    r.review_id && r.review_id.trim().length &&
+    r.order_id && orderIdSet.has(r.order_id)
+  ).map(r => {
+    // normalise dates: "YYYY-MM-DD hh:mm:ss" -> "YYYY-MM-DDThh:mm:ss"
+    const fixDate = (s) => {
+      if (!s || !s.trim()) return null;
+      const t = s.includes(" ") ? s.replace(" ", "T") : s;
+      const d = new Date(t);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+    // normalise score: 1..5 or null
+    const scoreNum = r.review_score ? parseInt(r.review_score, 10) : null;
+    const score = (Number.isInteger(scoreNum) && scoreNum >= 1 && scoreNum <= 5) ? scoreNum : null;
 
-// Build existence set from actually-inserted orders
-const orderIdSet = new Set(ordersFiltered.map(o => o.order_id));
-
-// Keep only valid rows
-const reviewsFiltered = reviewsAll.filter(r =>
-  r.review_id && r.review_id.trim().length &&
-  r.order_id && orderIdSet.has(r.order_id)
-).map(r => {
-  // normalise dates: "YYYY-MM-DD hh:mm:ss" -> "YYYY-MM-DDThh:mm:ss"
-  const fixDate = (s) => {
-    if (!s || !s.trim()) return null;
-    const t = s.includes(" ") ? s.replace(" ", "T") : s;
-    const d = new Date(t);
-    return Number.isNaN(d.getTime()) ? null : d;
-  };
-
-  // normalise score: must be 1..5 or null (to avoid constraint errors)
-  const scoreNum = r.review_score ? parseInt(r.review_score, 10) : null;
-  const score = (Number.isInteger(scoreNum) && scoreNum >= 1 && scoreNum <= 5) ? scoreNum : null;
-
-  return {
-    review_id: r.review_id,
-    order_id: r.order_id,
-    review_score: score,
-    review_comment_title: r.review_comment_title ?? null,
-    review_comment_message: r.review_comment_message ?? null,
-    review_creation_date: fixDate(r.review_creation_date),
-    review_answer_timestamp: fixDate(r.review_answer_timestamp)
-  };
-});
-
-const droppedReviews = reviewsAll.length - reviewsFiltered.length;
-console.log(`Order reviews total: ${reviewsAll.length} | inserting: ${reviewsFiltered.length} | dropped (FK/invalid): ${droppedReviews}`);
-
-await bulkInsert(
-  "order_reviews",
-  ["review_id","order_id","review_score","review_comment_title","review_comment_message",
-   "review_creation_date","review_answer_timestamp"],
-  reviewsFiltered,
-  { ints: new Set(["review_score"]), dates: new Set(["review_creation_date","review_answer_timestamp"]) }
-);
+    return {
+      review_id: r.review_id,
+      order_id: r.order_id,
+      review_score: score,
+      review_comment_title: r.review_comment_title ?? null,
+      review_comment_message: r.review_comment_message ?? null,
+      review_creation_date: fixDate(r.review_creation_date),
+      review_answer_timestamp: fixDate(r.review_answer_timestamp)
+    };
+  });
+  const droppedReviews = reviewsAll.length - reviewsFiltered.length;
+  console.log(`Order reviews total: ${reviewsAll.length} | inserting: ${reviewsFiltered.length} | dropped (FK/invalid): ${droppedReviews}`);
+  await bulkInsert(
+    "order_reviews",
+    ["review_id","order_id","review_score","review_comment_title","review_comment_message",
+     "review_creation_date","review_answer_timestamp"],
+    reviewsFiltered,
+    { ints: new Set(["review_score"]), dates: new Set(["review_creation_date","review_answer_timestamp"]) }
+  );
 
   console.log("✅ All CSVs loaded successfully");
   await pool.end();
