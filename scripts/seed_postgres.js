@@ -40,19 +40,27 @@ async function runSQL(sqlPath) {
   await pool.query(sql);
 }
 
-async function bulkInsert(table, columns, rows) {
+async function bulkInsert(table, columns, rows, batchSize = 500) {
   if (!rows.length) return;
-  const values = [];
-  const params = [];
-  let p = 1;
-  for (const r of rows) {
-    values.push(`(${columns.map(() => `$${p++}`).join(",")})`);
-    params.push(...columns.map(c => r[c] ?? null));
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const chunk = rows.slice(i, i + batchSize);
+    const values = [];
+    const params = [];
+    let p = 1;
+    for (const r of chunk) {
+      values.push(`(${columns.map(() => `$${p++}`).join(",")})`);
+      params.push(...columns.map(c => r[c] ?? null));
+    }
+    const sql = `
+      INSERT INTO ${table} (${columns.join(",")})
+      VALUES ${values.join(",")}
+      ON CONFLICT DO NOTHING;
+    `;
+    await pool.query(sql, params);
+    console.log(`Inserted ${Math.min(i + batchSize, rows.length)}/${rows.length} rows into ${table}`);
   }
-  const sql = `INSERT INTO ${table} (${columns.join(",")}) VALUES ${values.join(",")}
-               ON CONFLICT DO NOTHING`;
-  await pool.query(sql, params);
 }
+
 
 async function main() {
   // optional: log host sanity
