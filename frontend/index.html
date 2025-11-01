@@ -1,15 +1,23 @@
 <script>
-  const API = (window.API_BASE_URL || "{{API_BASE_URL}}").replace(/\/$/, "");
-  // If not templating, you can inline the env via a tiny script tag in Railway, or just hardcode the API URL.
-  // Simpler approach: hardcode the API URL for now:
-  // const API = "https://<your-api>.up.railway.app";
+    // FIX: Set API to an empty string ("") to use the current domain.
+    // This connects to the service hosting this HTML page:
+    // https://e-commerce-frontend-production-f9c0.up.railway.app/api/products
+    const API = ""; 
 
-  async function loadProducts(){
-    const res = await fetch(`${API}/api/products`);
-    const products = await res.json();
-    console.log(products);
-    // TODO: render products into the page
-  }
-  loadProducts();
+    async function loadProducts(){
+      const res = await fetch(`${API}/api/products`);
+      
+      if (!res.ok) {
+          // If this still fails, your frontend server.js file is not handling the route.
+          console.error(`Fetch failed with status: ${res.status}. Check your 'frontend/server.js' route definitions.`);
+          throw new Error(`HTTP error: ${res.status}`); 
+      }
+
+      const products = await res.json();
+      console.log(products);
+      // TODO: render products into the page
+    }
+    
+    // Call the function and catch errors gracefully
+    loadProducts().catch(e => console.error("Could not load products:", e));
 </script>
-
