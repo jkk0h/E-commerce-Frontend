@@ -6,10 +6,22 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const POSTGRES_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+if (!POSTGRES_URL) {
+  console.error("❌ Missing POSTGRES_URL (or DATABASE_URL). Add it in Railway → Scripts service → Variables.");
+  process.exit(1);
+}
+
 const pool = new pg.Pool({
-  connectionString: process.env.POSTGRES_URL,
+  connectionString: POSTGRES_URL,
   ssl: { rejectUnauthorized: false }
 });
+
+// sanity log (password is not printed)
+try {
+  const u = new URL(POSTGRES_URL);
+  console.log("Connecting to Postgres host:", u.hostname, "port:", u.port || "(default)");
+} catch {}
 
 function readCSV(file) {
   const raw = fs.readFileSync(file, "utf-8").trim();
