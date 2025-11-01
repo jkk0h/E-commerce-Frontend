@@ -16,14 +16,14 @@ const port = process.env.PORT || 5173;
 // --- A. DATABASE CONNECTION SETUP ---
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI; 
-if (MONGO_URI) {
-    mongoose.connect(MONGO_URI)
-        .then(() => console.log("MongoDB connected successfully."))
-        .catch(err => console.error("MongoDB connection error:", err));
-} else {
-    console.warn("MONGO_URI not found. MongoDB features will be disabled.");
-}
+// const MONGO_URI = process.env.MONGO_URI; 
+// if (MONGO_URI) {
+//     mongoose.connect(MONGO_URI)
+//         .then(() => console.log("MongoDB connected successfully."))
+//         .catch(err => console.error("MongoDB connection error:", err));
+// } else {
+//     console.warn("MONGO_URI not found. MongoDB features will be disabled.");
+// }
 
 // PostgreSQL Connection
 const PG_URI = process.env.PG_URI;
