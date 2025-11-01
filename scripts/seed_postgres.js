@@ -21,12 +21,13 @@ const pool = new pg.Pool({
 // Option B layout: CSVs live at /scripts/data
 const dataDir = path.resolve(__dirname, "data");
 
-// --- CSV loader (simple) ---
+// --- CSV loader (now drops blank lines) ---
 function readCSV(file) {
   const raw = fs.readFileSync(file, "utf-8").trim();
-  const [header, ...lines] = raw.split(/\r?\n/);
+  const lines = raw.split(/\r?\n/).filter(l => l.trim().length); // drop blanks
+  const [header, ...rows] = lines;
   const cols = header.split(",").map(h => h.trim());
-  return lines.filter(Boolean).map(line => {
+  return rows.map(line => {
     const vals = line.split(",").map(x => x.trim());
     const obj = {};
     cols.forEach((c, i) => (obj[c] = vals[i] ?? null));
@@ -136,10 +137,13 @@ async function main() {
   );
 
   console.log("Loading customers...");
+  const customersAll = readCSV(path.join(dataDir, "olist_customers_dataset.csv"));
+  const customersFiltered = customersAll.filter(r => r.customer_id && r.customer_id.trim().length);
+  console.log(`Customers total: ${customersAll.length} | inserting: ${customersFiltered.length} | dropped: ${customersAll.length - customersFiltered.length}`);
   await bulkInsert(
     "customers",
     ["customer_id","customer_unique_id","customer_zip_code_prefix","customer_city","customer_state"],
-    readCSV(path.join(dataDir, "olist_customers_dataset.csv")),
+    customersFiltered,
     { ints: INT_CUSTOMERS }
   );
 
