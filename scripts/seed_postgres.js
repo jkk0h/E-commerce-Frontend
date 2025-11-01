@@ -19,8 +19,8 @@ const pool = new pg.Pool({
 });
 
 // data dir is sibling at repo root: /data
-const dataDir = path.resolve(__dirname, "/data");
-console.log("Using dataDir:", dataDir);  // sanity log
+const dataDir = path.resolve(__dirname, "data");
+//console.log("Using dataDir:", dataDir);  // sanity log
 
 // tiny csv loader
 function readCSV(file) {
