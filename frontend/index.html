@@ -1,80 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>E-Commerce Demo</title>
-    <style>
-        body { font-family: Arial; padding: 20px; }
-        .product { padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; border-radius: 6px; }
-        .error { color: #cc0000; font-weight: bold; padding: 10px; border: 1px solid #cc0000; background-color: #ffeeee; border-radius: 6px; }
-    </style>
+  <title>E-Commerce Demo</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .product { padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; border-radius: 6px; }
+    .error { color: #b00020; font-weight: 600; padding: 10px; border: 1px solid #b00020; background: #ffefef; border-radius: 6px; }
+  </style>
 </head>
 <body>
+  <h1>E-Commerce Catalog</h1>
+  <p>Products loaded from API (MongoDB)</p>
 
-    <h1>E-Commerce Catalog</h1>
-    <p>Products loaded from API (MongoDB)</p>
-    
-    <div id="products"></div>
+  <div id="products">Loading…</div>
 
-    <script>
-        // NOTE: Replace the placeholder below with the actual URL of your deployed API service.
-        const API_URL = "https://<YOUR-API-SERVICE>.up.railway.app"; 
+  <script>
+    // IMPORTANT: this must be your API service URL (NOT the frontend URL)
+    const API_URL = "https://e-commerce-frontend-production-f9c0.up.railway.app/";  // <-- replace
 
-        async function loadProducts(){
-            const res = await fetch(`${API_URL}/api/products`);
+    const container = document.getElementById("products");
+
+    function displayError(message) {
+      container.innerHTML = `<div class="error">Error loading products: ${message}</div>`;
+    }
+
+    async function loadProducts() {
+      try {
+        const res = await fetch(`${API_URL}/api/products`);
+        if (!res.ok) {
+          // Helpful message if Mongo route is off/503
+          throw new Error(`HTTP ${res.status}. Is /api/products enabled and CORS whitelisted? API = ${API_URL}`);
         }
-        const container = document.getElementById('products');
+        const data = await res.json();
 
-        function displayError(message) {
-            container.innerHTML = `<div class="error">Error loading products: ${message}</div>`;
+        container.innerHTML = "";
+        (data || []).forEach(p => {
+          const div = document.createElement("div");
+          div.className = "product";
+          const title = p.title || p.product_category_name || "Untitled";
+          const sku = p.sku || p.product_id || "N/A";
+          const price = p.price != null ? `$${p.price}` : "(no price)";
+          div.innerHTML = `<b>${title}</b><br>SKU: ${sku}<br>Price: ${price}`;
+          container.appendChild(div);
+        });
+
+        if (!data || data.length === 0) {
+          container.innerHTML = "<p>Catalog is empty. Check Mongo seeding or try a SQL endpoint instead.</p>";
         }
+      } catch (err) {
+        console.error(err);
+        displayError(err.message || "Network error. See console for details.");
+      }
+    }
 
-        async function loadProducts(){
-            try {
-                // 1. Fetch the data from the API
-                const res = await fetch(`${API_URL}/api/products`);
-
-                // 2. Check for a successful HTTP status (200-299)
-                if (!res.ok) {
-                    // Throw an error if the status is 404, 500, etc.
-                    throw new Error(`HTTP Error ${res.status}: Check if the API is running at ${API_URL}`);
-                }
-
-                // 3. Attempt to parse the JSON data
-                const data = await res.json();
-
-                // 4. Clear and render products
-                container.innerHTML = "";
-                data.forEach(p => {
-                    const div = document.createElement("div");
-                    div.className = "product";
-                    
-                    // Use a fallback for missing data fields
-                    const title = p.title || p.product_category_name || 'No Title'; 
-                    const sku = p.sku || p.product_id || 'N/A';
-                    const price = p.price ? `$${p.price}` : 'Unknown Price';
-
-                    div.innerHTML = `
-                        <b>${title}</b><br>
-                        SKU: ${sku}<br>
-                        Price: ${price}
-                    `;
-                    container.appendChild(div);
-                });
-
-                if (data.length === 0) {
-                    container.innerHTML = "<p>Catalog is empty. Check your database seeding.</p>";
-                }
-
-            } catch (error) {
-                console.error("Fetch/Render Error:", error);
-                // Display a user-friendly error message on the page
-                displayError(error.message || "A network error occurred. Check the console for details.");
-            }
-        }
-
-        // Run the function on page load
-        loadProducts();
-    </script>
-
+    loadProducts();
+  </script>
 </body>
 </html>
