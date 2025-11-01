@@ -1,3 +1,5 @@
+// In api/db.js
+
 import { MongoClient } from "mongodb";
 import pg from "pg";
 
@@ -7,7 +9,9 @@ export async function connectAll() {
     ssl: { rejectUnauthorized: false }
   });
 
-  const mongoClient = new MongoClient(process.env.MONGODB_URI);
+  // 👇 CHANGE THIS LINE
+  // Use MONGO_URL, which Railway automatically sets, instead of MONGODB_URI
+  const mongoClient = new MongoClient(process.env.MONGO_URL); 
   await mongoClient.connect();
   const mongoDb = mongoClient.db(process.env.MONGO_DB_NAME || "appdb");
 
