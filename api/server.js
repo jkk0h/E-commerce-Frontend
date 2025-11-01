@@ -25,5 +25,23 @@ app.get("/diagnostics", async (_req, res) => {
   }
 });
 
+app.get("/api/products", async (_req, res) => {
+    try {
+        // Check if mongoDb connection exists (from connectAll)
+        if (!mongoDb) {
+            return res.status(503).json({ error: "MongoDB connection not available." });
+        }
+
+        // Fetch all documents from the 'products' collection
+        const products = await mongoDb.collection("products").find({}).toArray();
+
+        // Respond with the products array
+        res.json(products);
+    } catch (e) {
+        console.error("Error fetching products:", e);
+        res.status(500).json({ error: "Failed to retrieve products from database." });
+    }
+});
+
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log("API listening on", port));
