@@ -1,61 +1,242 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>E-Commerce Demo</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .product { padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; border-radius: 6px; }
-    .error { color: #b00020; font-weight: 600; padding: 10px; border: 1px solid #b00020; background: #ffefef; border-radius: 6px; }
-  </style>
+    <title>The Next-Gen Store</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f8f9fa; }
+        h1 { color: #343a40; }
+        .error { color: #b00020; font-weight: 600; padding: 10px; border: 1px solid #b00020; background: #ffefef; border-radius: 6px; }
+
+        /* --- Product Grid Styling --- */
+        #products {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .product { 
+            padding: 0; 
+            border: 1px solid #dee2e6; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .product:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+        .product-image {
+            background: #e9ecef;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .product-info {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        .product-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            color: #343a40;
+        }
+        .product-price {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 1.3em;
+            margin-top: 10px;
+        }
+
+        /* --- Modal Styling --- */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto; /* 10% from the top and centered */
+            padding: 25px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            max-width: 600px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .add-to-cart {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-top: 20px;
+        }
+        .add-to-cart:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-  <h1>E-Commerce Catalog</h1>
-  <p>Products loaded from API (MongoDB)</p>
+    <h1>🌟 The Next-Gen Store 🛒</h1>
+    <p>Discover our latest collection of curated products.</p>
 
-  <div id="products">Loading…</div>
+    <div id="products">Loading…</div>
 
-  <script>
-    // IMPORTANT: this must be your API service URL (NOT the frontend URL)
-    const API_URL = "https://e-commerce-frontend-production-f9c0.up.railway.app/";  // <-- replace
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Product Details</h2>
+            <div id="modalDetails">Loading product details...</div>
+            <button class="add-to-cart" id="addToCartButton">Add to Cart</button>
+            <p style="font-size: 0.8em; margin-top: 10px;">(This is a demonstration. Cart functionality is not implemented.)</p>
+        </div>
+    </div>
 
-    const container = document.getElementById("products");
+    <script>
+        // IMPORTANT: Ensure this URL matches your API Service (The one that runs server.js in the 'api' folder)
+        // **DO NOT** use the frontend's own URL here unless your frontend is also your API.
+        const API_URL = "https://e-commerce-frontend-production-f9c0.up.railway.app/"; 
 
-    function displayError(message) {
-      container.innerHTML = `<div class="error">Error loading products: ${message}</div>`;
-    }
+        const container = document.getElementById("products");
+        const modal = document.getElementById("productModal");
+        const modalDetails = document.getElementById("modalDetails");
+        const closeBtn = document.querySelector(".close");
+        const cartBtn = document.getElementById("addToCartButton");
 
-    async function loadProducts() {
-      try {
-        const res = await fetch(`${API_URL}api/products`);
-        if (!res.ok) {
-          // Helpful message if Mongo route is off/503
-          throw new Error(`HTTP ${res.status}. Is api/products enabled and CORS whitelisted? API = ${API_URL}`);
+        // --- Event Listeners for Modal ---
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
         }
-        const data = await res.json();
-
-        container.innerHTML = "";
-        (data || []).forEach(p => {
-          const div = document.createElement("div");
-          div.className = "product";
-          const title = p.title || p.product_category_name || "Untitled";
-          const sku = p.sku || p.product_id || "N/A";
-          const price = p.price != null ? `$${p.price}` : "(no price)";
-          div.innerHTML = `<b>${title}</b><br>SKU: ${sku}<br>Price: ${price}`;
-          container.appendChild(div);
-        });
-
-        if (!data || data.length === 0) {
-          container.innerHTML = "<p>Catalog is empty. Check Mongo seeding or try a SQL endpoint instead.</p>";
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
         }
-      } catch (err) {
-        console.error(err);
-        displayError(err.message || "Network error. See console for details.");
-      }
-    }
+        cartBtn.onclick = function() {
+            alert(`Added item to cart! (Placeholder function)`);
+            modal.style.display = "none";
+        }
 
-    loadProducts();
-  </script>
+
+        function displayError(message) {
+            container.innerHTML = `<div class="error">Error loading products: ${message}</div>`;
+        }
+        
+        // --- Fetch Details for Modal ---
+        async function fetchProductDetails(productId) {
+            modalDetails.innerHTML = "Loading...";
+            modal.style.display = "block";
+
+            // NOTE: You MUST ensure your API has a route like /api/products/B000000001
+            try {
+                // *** FIX APPLIED HERE: API_URL already has a trailing slash, so we don't add one. ***
+                const res = await fetch(`${API_URL}api/products/${productId}`);
+                
+                if (!res.ok) {
+                    throw new Error(`Details for ${productId} not found (HTTP ${res.status}).`);
+                }
+                const p = await res.json();
+                
+                const title = p.title || p.product_category_name || "Untitled Product";
+                const price = p.price != null ? `$${p.price.toFixed(2)}` : "Price TBD";
+                const description = p.product_description || p.review_comment || "No detailed description available.";
+
+                modalDetails.innerHTML = `
+                    <h3>${title}</h3>
+                    <p><strong>SKU:</strong> ${p.sku || p.product_id || "N/A"}</p>
+                    <p><strong>Price:</strong> <span style="color:#007bff; font-size:1.4em;">${price}</span></p>
+                    <hr>
+                    <p>${description}</p>
+                `;
+
+            } catch (err) {
+                modalDetails.innerHTML = `<p class="error">Failed to load details: ${err.message}</p>`;
+                console.error("Error fetching product details:", err);
+            }
+        }
+
+        // --- Load Product Grid ---
+        async function loadProducts() {
+            try {
+                // *** FIX APPLIED HERE: API_URL already has a trailing slash, so we don't add one. ***
+                const res = await fetch(`${API_URL}api/products`);
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}. Check your API deployment and routing.`);
+                }
+                const data = await res.json();
+
+                container.innerHTML = "";
+                if (!data || data.length === 0) {
+                    container.innerHTML = "<p>Catalog is empty. Check your database connection/seeding.</p>";
+                    return;
+                }
+                
+                (data || []).forEach(p => {
+                    const div = document.createElement("div");
+                    div.className = "product";
+                    // Store the product ID for the click handler
+                    div.dataset.productId = p.sku || p.product_id; 
+
+                    const title = p.title || p.product_category_name || "Untitled";
+                    const price = p.price != null ? `$${p.price.toFixed(2)}` : "(no price)";
+                    
+                    div.innerHTML = `
+                        <div class="product-image">Product Image Placeholder</div>
+                        <div class="product-info">
+                            <span class="product-title">${title}</span>
+                            <span class="product-price">${price}</span>
+                        </div>
+                    `;
+                    
+                    // Add click handler to open the modal and fetch details
+                    div.addEventListener('click', () => {
+                        fetchProductDetails(div.dataset.productId);
+                    });
+
+                    container.appendChild(div);
+                });
+
+            } catch (err) {
+                console.error(err);
+                displayError(err.message || "Network error. See console for details.");
+            }
+        }
+
+        loadProducts();
+    </script>
 </body>
 </html>
