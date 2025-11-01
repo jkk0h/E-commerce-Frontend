@@ -21,33 +21,41 @@ const pool = new pg.Pool({
 // Option B layout: CSVs live at /scripts/data
 const dataDir = path.resolve(__dirname, "data");
 
-/* ---------------- CSV utils (BOM-safe) ---------------- */
+/* ---------------- CSV utils: normalize header once ---------------- */
+
+function normKey(s) {
+  return (s || "")
+    .replace(/^\uFEFF/, "")   // strip BOM
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_");    // collapse spaces -> underscore
+}
 
 function splitCSVLine(line) {
-  // simple split for this dataset (no embedded commas/quotes in Olist)
+  // Olist CSVs are simple (no quoted commas). If needed, switch to a CSV lib.
   return line.split(",").map(s => s.trim());
 }
 
 function readCSV(file) {
-  const raw = fs.readFileSync(file, "utf-8").trim();
+  const raw = fs.readFileSync(file, "utf-8");
   const lines = raw.split(/\r?\n/).filter(l => l.trim().length); // drop blanks
   if (!lines.length) return [];
 
-  // strip BOM from the first line, and from each column name just in case
+  // normalize header to stable keys
   const headerLine = lines[0].replace(/^\uFEFF/, "");
-  const cols = splitCSVLine(headerLine).map(h => h.replace(/^\uFEFF/, ""));
+  const cols = splitCSVLine(headerLine).map(normKey);
 
-  const rows = lines.slice(1);
-  return rows.map(line => {
-    const vals = splitCSVLine(line);
-    const obj = {};
-    cols.forEach((c, i) => (obj[c] = (i < vals.length ? vals[i] : null)));
-    return obj;
-  });
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = splitCSVLine(lines[i]);
+    const row = {};
+    for (let c = 0; c < cols.length; c++) {
+      row[cols[c]] = (c < vals.length ? vals[c] : null);
+    }
+    out.push(row);
+  }
+  return out;
 }
-
-// helper: get a value by key, tolerant to BOM'd key names
-const v = (obj, key) => obj[key] ?? obj["\uFEFF" + key] ?? null;
 
 /* ---------------- Coercion helpers ---------------- */
 
@@ -132,9 +140,9 @@ async function main() {
   // products (Option 1: filter by known categories)
   console.log("Loading products (filtering unknown categories)...");
   const productsAll = readCSV(path.join(dataDir, "olist_products_dataset.csv"));
-  const categorySet = new Set(categoryRows.map(c => v(c, "product_category_name")).filter(Boolean));
+  const categorySet = new Set(categoryRows.map(c => c.product_category_name).filter(Boolean));
   const productsFiltered = productsAll.filter(p =>
-    !v(p, "product_category_name") || categorySet.has(v(p, "product_category_name"))
+    !p.product_category_name || categorySet.has(p.product_category_name)
   );
   console.log(`Products total: ${productsAll.length} | inserting: ${productsFiltered.length} | dropped: ${productsAll.length - productsFiltered.length}`);
 
@@ -142,17 +150,7 @@ async function main() {
     "products",
     ["product_id","product_category_name","product_name_length","product_description_length","product_photos_qty",
      "product_weight_g","product_length_cm","product_height_cm","product_width_cm"],
-    productsFiltered.map(p => ({
-      product_id: v(p, "product_id"),
-      product_category_name: v(p, "product_category_name"),
-      product_name_length: v(p, "product_name_length"),
-      product_description_length: v(p, "product_description_length"),
-      product_photos_qty: v(p, "product_photos_qty"),
-      product_weight_g: v(p, "product_weight_g"),
-      product_length_cm: v(p, "product_length_cm"),
-      product_height_cm: v(p, "product_height_cm"),
-      product_width_cm: v(p, "product_width_cm"),
-    })),
+    productsFiltered,
     { ints: INT_PRODUCTS }
   );
 
@@ -162,30 +160,24 @@ async function main() {
   await bulkInsert(
     "sellers",
     ["seller_id","seller_zip_code_prefix","seller_city","seller_state"],
-    sellersAll.map(s => ({
-      seller_id: v(s, "seller_id"),
-      seller_zip_code_prefix: v(s, "seller_zip_code_prefix"),
-      seller_city: v(s, "seller_city"),
-      seller_state: v(s, "seller_state"),
-    })),
+    sellersAll,
     { ints: INT_SELLERS }
   );
 
-  // customers (BOM-safe + filter rows with missing customer_id)
+  // customers (now safe; keys normalized)
   console.log("Loading customers...");
   const customersAll = readCSV(path.join(dataDir, "olist_customers_dataset.csv"));
+  console.log("Sample customer keys:", Object.keys(customersAll[0] || {}));
   const customersFiltered = customersAll
+    .filter(r => r.customer_id && r.customer_id.trim().length)
     .map(r => ({
-      customer_id: v(r, "customer_id"),
-      customer_unique_id: v(r, "customer_unique_id"),
-      customer_zip_code_prefix: v(r, "customer_zip_code_prefix"),
-      customer_city: v(r, "customer_city"),
-      customer_state: v(r, "customer_state"),
-    }))
-    .filter(r => r.customer_id && r.customer_id.trim().length);
-
+      customer_id: r.customer_id,
+      customer_unique_id: r.customer_unique_id ?? null,
+      customer_zip_code_prefix: r.customer_zip_code_prefix ?? null,
+      customer_city: r.customer_city ?? null,
+      customer_state: r.customer_state ?? null,
+    }));
   console.log(`Customers total: ${customersAll.length} | inserting: ${customersFiltered.length} | dropped: ${customersAll.length - customersFiltered.length}`);
-
   await bulkInsert(
     "customers",
     ["customer_id","customer_unique_id","customer_zip_code_prefix","customer_city","customer_state"],
@@ -193,23 +185,28 @@ async function main() {
     { ints: INT_CUSTOMERS }
   );
 
-  // orders
+  // orders (skip blank order_id rows)
   console.log("Loading orders...");
   const ordersAll = readCSV(path.join(dataDir, "olist_orders_dataset.csv"));
+  console.log("Sample order keys:", Object.keys(ordersAll[0] || {}));
+  const ordersFiltered = ordersAll
+    .filter(o => o.order_id && o.order_id.trim().length)
+    .map(o => ({
+      order_id: o.order_id,
+      customer_id: o.customer_id ?? null,
+      order_status: o.order_status ?? null,
+      order_purchase_timestamp: o.order_purchase_timestamp ?? null,
+      order_approved_at: o.order_approved_at ?? null,
+      order_delivered_carrier_date: o.order_delivered_carrier_date ?? null,
+      order_delivered_customer_date: o.order_delivered_customer_date ?? null,
+      order_estimated_delivery_date: o.order_estimated_delivery_date ?? null,
+    }));
+  console.log(`Orders total: ${ordersAll.length} | inserting: ${ordersFiltered.length} | dropped: ${ordersAll.length - ordersFiltered.length}`);
   await bulkInsert(
     "orders",
     ["order_id","customer_id","order_status","order_purchase_timestamp","order_approved_at",
      "order_delivered_carrier_date","order_delivered_customer_date","order_estimated_delivery_date"],
-    ordersAll.map(o => ({
-      order_id: v(o, "order_id"),
-      customer_id: v(o, "customer_id"),
-      order_status: v(o, "order_status"),
-      order_purchase_timestamp: v(o, "order_purchase_timestamp"),
-      order_approved_at: v(o, "order_approved_at"),
-      order_delivered_carrier_date: v(o, "order_delivered_carrier_date"),
-      order_delivered_customer_date: v(o, "order_delivered_customer_date"),
-      order_estimated_delivery_date: v(o, "order_estimated_delivery_date"),
-    })),
+    ordersFiltered,
     { dates: DATE_ORDERS }
   );
 
@@ -219,15 +216,7 @@ async function main() {
   await bulkInsert(
     "order_items",
     ["order_id","order_item_id","product_id","seller_id","shipping_limit_date","price","freight_value"],
-    itemsAll.map(i => ({
-      order_id: v(i, "order_id"),
-      order_item_id: v(i, "order_item_id"),
-      product_id: v(i, "product_id"),
-      seller_id: v(i, "seller_id"),
-      shipping_limit_date: v(i, "shipping_limit_date"),
-      price: v(i, "price"),
-      freight_value: v(i, "freight_value"),
-    })),
+    itemsAll,
     { ints: INT_ITEMS, floats: FLOAT_ITEMS, dates: new Set(["shipping_limit_date"]) }
   );
 
@@ -237,13 +226,7 @@ async function main() {
   await bulkInsert(
     "order_payments",
     ["order_id","payment_sequential","payment_type","payment_installments","payment_value"],
-    paysAll.map(p => ({
-      order_id: v(p, "order_id"),
-      payment_sequential: v(p, "payment_sequential"),
-      payment_type: v(p, "payment_type"),
-      payment_installments: v(p, "payment_installments"),
-      payment_value: v(p, "payment_value"),
-    })),
+    paysAll,
     { ints: INT_PAYMENTS, floats: FLOAT_PAYMENTS }
   );
 
@@ -254,15 +237,7 @@ async function main() {
     "order_reviews",
     ["review_id","order_id","review_score","review_comment_title","review_comment_message",
      "review_creation_date","review_answer_timestamp"],
-    reviewsAll.map(r => ({
-      review_id: v(r, "review_id"),
-      order_id: v(r, "order_id"),
-      review_score: v(r, "review_score"),
-      review_comment_title: v(r, "review_comment_title"),
-      review_comment_message: v(r, "review_comment_message"),
-      review_creation_date: v(r, "review_creation_date"),
-      review_answer_timestamp: v(r, "review_answer_timestamp"),
-    })),
+    reviewsAll,
     { ints: new Set(["review_score"]), dates: DATE_REVIEWS }
   );
 
