@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "scripts": {
+    "seed": "node seed_postgres.js"
+  },
+  "dependencies": {
+    "pg": "^8"
+  }
+}

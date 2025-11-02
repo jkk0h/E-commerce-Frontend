@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | Next-Gen Store</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 p-8 text-gray-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
+    <div class="p-6 border-b border-indigo-500 flex justify-between items-center">
+      <h1 class="text-xl font-bold">Next-Gen Store</h1>
+      <button id="closeSidebar" class="text-white text-2xl font-bold">&times;</button>
+    </div>
+    <nav class="flex-grow p-4 space-y-2">
+      <a href="index.html#customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
+      <a href="admin.html" class="block px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition">⚙️ Admin View</a>
+      <a href="commands.html" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
+    </nav>
+  </aside>
+
+  <button id="menuBtn" class="fixed top-5 left-5 bg-indigo-600 text-white p-2 rounded-md shadow-md z-50">☰</button>
+
+  <main class="max-w-5xl mx-auto mt-16">
+    <h1 class="text-4xl font-bold text-indigo-700 mb-6 text-center">⚙️ Admin View</h1>
+
+    <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+      <h3 class="text-xl font-semibold mb-3 text-gray-700">Add New Product</h3>
+      <form id="addProductForm" class="space-y-3">
+        <input type="text" id="newTitle" placeholder="Product Name" class="w-full border p-2 rounded" required>
+        <input type="number" id="newPrice" placeholder="Price" class="w-full border p-2 rounded" required>
+        <input type="text" id="newSKU" placeholder="SKU" class="w-full border p-2 rounded" required>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg">Add Product</button>
+      </form>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-lg">
+      <h3 class="text-xl font-semibold mb-3 text-gray-700">Current Inventory</h3>
+      <table class="w-full text-sm text-left border border-gray-200 rounded-lg">
+        <thead class="bg-gray-100">
+          <tr><th class="py-2 px-4 border-b">SKU</th><th class="py-2 px-4 border-b">Name</th><th class="py-2 px-4 border-b">Price</th><th class="py-2 px-4 border-b">Action</th></tr>
+        </thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const API_URL = "http://localhost:3000/";
+    const sidebar = document.getElementById("sidebar");
+    document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
+    document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
+
+    async function loadAdminTable() {
+      const tbody = document.getElementById("adminTableBody");
+      tbody.innerHTML = "<tr><td colspan='4' class='text-center p-4 text-gray-400'>Loading...</td></tr>";
+      const res = await fetch(`${API_URL}api/products`);
+      const data = await res.json();
+      tbody.innerHTML = "";
+      data.forEach(p => {
+        tbody.innerHTML += `<tr class='hover:bg-gray-50'>
+          <td class='p-2 border-b'>${p.sku}</td>
+          <td class='p-2 border-b'>${p.title}</td>
+          <td class='p-2 border-b'>$${p.price}</td>
+          <td class='p-2 border-b'><button onclick="deleteProduct('${p.sku}')" class='text-red-600 hover:underline'>Delete</button></td>
+        </tr>`;
+      });
+    }
+
+    document.getElementById("addProductForm").onsubmit = async e => {
+      e.preventDefault();
+      const product = { title: newTitle.value, price: newPrice.value, sku: newSKU.value };
+      await fetch(`${API_URL}api/products`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(product) });
+      e.target.reset();
+      loadAdminTable();
+    };
+
+    async function deleteProduct(sku) {
+      await fetch(`${API_URL}api/products/${sku}`, { method: "DELETE" });
+      loadAdminTable();
+    }
+
+    loadAdminTable();
+  </script>
+</body>
+</html>
