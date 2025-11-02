@@ -8,14 +8,6 @@ app.use(cors({ origin: [/\.up\.railway\.app$/] }));
 
 const { pgPool, mongoDb } = await connectAll();
 
-
-const app = express();
-app.use(express.json());
-// CORS is correctly configured to allow any Railway app subdomain, which is good.
-app.use(cors({ origin: [/\.up\.railway\.app$/] }));
-
-const { pgPool, mongoDb } = await connectAll();
-
 // Helper function to execute raw SQL (PostgreSQL) queries
 async function executeSqlQuery(query) {
     if (!pgPool) {
