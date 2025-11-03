@@ -135,18 +135,18 @@
         const filtered = query
           ? data.filter(p => (p.title || "").toLowerCase().includes(query.toLowerCase()))
           : data;
-        grid.innerHTML = filtered.length
-          ? filtered.map(p => `
-            <div class='bg-white rounded-xl shadow hover:shadow-2xl transition transform hover:scale-105 overflow-hidden'>
-              <div class='bg-gray-100 h-48 flex items-center justify-center text-gray-400'>[Image]</div>
-              <div class='p-5'>
-                <h3 class='font-semibold text-lg text-gray-800'>${p.title || "Unnamed"}</h3>
-                <p class='text-sm text-gray-500'>SKU: ${p.sku || p.product_id}</p>
-                <p class='text-green-600 font-bold text-xl mt-2'>$${parseFloat(p.price || 0).toFixed(2)}</p>
-                <button class='mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold buy-btn' data-sku='${p.sku || p.product_id}'>Buy Now</button>
-              </div>
-            </div>`).join("")
-          : "<p class='text-gray-500'>No products found.</p>";
+            grid.innerHTML = filtered.length
+            ? filtered.map(p => `
+                <div class='bg-white rounded-xl shadow hover:shadow-2xl transition transform hover:scale-105 overflow-hidden'>
+                <div class='p-5'>
+                    <h3 class='font-semibold text-lg text-gray-800'>${p.title || "Unnamed"}</h3>
+                    <p class='text-sm text-gray-500'>SKU: ${p.sku || p.product_id}</p>
+                    <p class='text-green-600 font-bold text-xl mt-2'>$${parseFloat(p.price || 0).toFixed(2)}</p>
+                    <button class='mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-semibold buy-btn' data-sku='${p.sku || p.product_id}'>Buy Now</button>
+                </div>
+                </div>`).join("")
+            : "<p class='text-gray-500'>No products found.</p>";
+
       } catch (err) {
         errorBox.textContent = "Error: Failed to fetch data. Please check your backend connection.";
         errorBox.classList.remove("hidden");
