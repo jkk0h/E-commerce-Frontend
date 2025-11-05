@@ -287,6 +287,11 @@
 
         // --- Load Product Grid (Initial Fetch) ---
         async function loadProducts() {
+            div.addEventListener('click', () => {
+                const productId = p.sku || p.product_id;
+                // Navigate to the new detail page, passing the ID
+                window.location.href = `product-detail.html?id=${productId}`;
+            });
             container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">
                                        <svg class="animate-spin h-5 w-5 mr-3 inline text-indigo-600" viewBox="0 0 24 24"></svg>
                                        Loading Products...
