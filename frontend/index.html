@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌟 The Next-Gen Store 🛒</title>
+    <title>🌟 The Next-Gen Store | Filter & Sort 🛒</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Existing Styles */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
             color: #1f2937;
         }
-        /* --- Product Grid Styling --- */
         #products {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 24px; /* Increased gap */
+            gap: 24px;
             margin-top: 24px;
         }
         .product { 
             padding: 0; 
-            border: 1px solid #e5e7eb; /* Light border */
+            border: 1px solid #e5e7eb;
             border-radius: 8px; 
             overflow: hidden; 
             cursor: pointer;
@@ -52,12 +52,12 @@
         }
         .product-price {
             font-weight: bold;
-            color: #10b981; /* Tailwind green-500 */
+            color: #10b981;
             font-size: 1.3em;
             margin-top: 10px;
         }
 
-        /* --- Modal Styling --- (using Tailwind classes where possible) */
+        /* Modal Styling (using Tailwind classes where possible) */
         .modal {
             display: none;
             position: fixed;
@@ -68,6 +68,21 @@
             height: 100%;
             overflow: auto;
             background-color: rgba(0,0,0,0.4);
+        }
+        
+        /* Custom Hover Dropdown for Future Filtering */
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 250px;
+            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+            z-index: 1;
+            padding: 12px;
+            border-radius: 6px;
         }
     </style>
 </head>
@@ -83,6 +98,44 @@
         <h1 class="text-4xl font-extrabold text-center text-indigo-600 mb-2">🌟 The Next-Gen Store 🛒</h1>
         <p class="text-center text-gray-500 mb-10 max-w-2xl mx-auto">Discover our latest collection of curated products loaded from the API.</p>
 
+        <div id="filter-sort-bar" class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border-b border-gray-200 mb-6">
+            
+            <div class="relative inline-block text-left dropdown">
+                <button class="inline-flex justify-center items-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414A1 1 0 0011 15.586V21h2v-5.414a1 1 0 00-.293-.707L7 6.586A1 1 0 017.293 6H20a1 1 0 00.707-.293l-4.707-4.707A1 1 0 0015.586 2H8.414A1 1 0 007.707 2.293L3 7v10a1 1 0 001 1h16a1 1 0 001-1z"></path></svg>
+                    Filters (Hover for Checkboxes)
+                </button>
+                <div class="dropdown-content">
+                    <h4 class="text-sm font-bold text-gray-800 mb-2">Filter by Category:</h4>
+                    <div class="space-y-1">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="cat1" name="category" value="shoes" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            <label for="cat1" class="ml-2 text-sm text-gray-700">Shoes</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="cat2" name="category" value="apparel" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            <label for="cat2" class="ml-2 text-sm text-gray-700">Apparel</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="cat3" name="category" value="accessories" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            <label for="cat3" class="ml-2 text-sm text-gray-700">Accessories</label>
+                        </div>
+                    </div>
+                    <button onclick="alert('Filtering functionality needs API support!')" class="mt-4 w-full bg-indigo-500 text-white py-1 text-sm rounded hover:bg-indigo-600">Apply Filters</button>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <label for="sort-select" class="text-sm font-medium text-gray-700">Sort By:</label>
+                <select id="sort-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="default">Default</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="name-asc">Name: A to Z</option>
+                    <option value="name-desc">Name: Z to A</option>
+                </select>
+            </div>
+        </div>
         <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-6 rounded-lg mb-8 shadow-inner">
             <h2 class="text-3xl font-bold mb-4 text-green-800">Available Products</h2>
             <div id="products">Loading…</div>
@@ -100,16 +153,19 @@
     </div>
 
     <script>
-        // IMPORTANT: Use the correct, fixed API URL (ending with a slash)
         const API_URL = "https://e-commerce-frontend-production-f9c0.up.railway.app/"; 
-
         const container = document.getElementById("products");
+        const sortSelect = document.getElementById("sort-select");
+
+        // Global array to hold ALL products loaded from the API
+        let allProducts = [];
+
+        // --- Event Listeners for Modal (Unchanged) ---
         const modal = document.getElementById("productModal");
         const modalDetails = document.getElementById("modalDetails");
         const closeBtn = document.querySelector(".close");
         const cartBtn = document.getElementById("addToCartButton");
 
-        // --- Event Listeners for Modal ---
         closeBtn.onclick = function() { modal.style.display = "none"; }
         window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
         cartBtn.onclick = function() {
@@ -117,32 +173,27 @@
             modal.style.display = "none";
         }
 
-        // --- Error Display Function (Styled) ---
+        // Add event listener for the Sort dropdown
+        sortSelect.addEventListener('change', applyFiltersAndSort);
+
+        // --- Utility Functions (Unchanged) ---
         function displayError(message) {
-            container.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
+            container.innerHTML = `<div class="col-span-full bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
                 <p class="font-bold">Error Loading Catalog</p>
                 <p>${message}</p>
             </div>`;
         }
         
-        // --- Fetch Details for Modal ---
         async function fetchProductDetails(productId) {
             modalDetails.innerHTML = "Loading...";
             modal.style.display = "block";
-
             try {
-                // *** FIX: API_URL + 'api/products/' + ID ***
                 const res = await fetch(`${API_URL}api/products/${productId}`);
-                
-                if (!res.ok) {
-                    throw new Error(`Details for ${productId} not found (HTTP ${res.status}).`);
-                }
+                if (!res.ok) throw new Error(`Details for ${productId} not found (HTTP ${res.status}).`);
                 const p = await res.json();
-                
                 const title = p.title || p.product_category_name || "Untitled Product";
                 const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "Price TBD";
                 const description = p.product_description || p.review_comment || "No detailed description available.";
-
                 modalDetails.innerHTML = `
                     <h3 class="text-xl font-semibold mb-2">${title}</h3>
                     <p class="text-sm"><strong>SKU:</strong> ${p.sku || p.product_id || "N/A"}</p>
@@ -150,14 +201,91 @@
                     <hr class="my-4">
                     <p>${description}</p>
                 `;
-
             } catch (err) {
                 modalDetails.innerHTML = `<p class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">Failed to load details: ${err.message}</p>`;
                 console.error("Error fetching product details:", err);
             }
         }
 
-        // --- Load Product Grid ---
+        // --- NEW: Render the Products to the Grid ---
+        function renderProducts(productsToDisplay) {
+            container.innerHTML = ""; // Clear existing products
+            
+            if (!productsToDisplay || productsToDisplay.length === 0) {
+                 container.innerHTML = `<div class="col-span-full bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-6 rounded-lg text-center">
+                    <p class="text-xl font-bold">No products match the current filters. 😔</p>
+                    <p>Try adjusting your sorting or filtering selections.</p>
+                </div>`;
+                return;
+            }
+            
+            productsToDisplay.forEach(p => {
+                const div = document.createElement("div");
+                div.className = "product";
+                div.dataset.productId = p.sku || p.product_id; 
+
+                const title = p.title || p.product_category_name || "Untitled";
+                const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "(no price)";
+                
+                div.innerHTML = `
+                    <div class="product-image">
+                        [Product Image Placeholder]
+                    </div>
+                    <div class="product-info">
+                        <span class="text-lg font-semibold text-gray-800">${title}</span>
+                        <span class="text-sm text-gray-500 mb-2">SKU: ${p.sku || p.product_id || "N/A"}</span>
+                        <span class="product-price">${price}</span>
+                    </div>
+                `;
+                
+                div.addEventListener('click', () => {
+                    fetchProductDetails(div.dataset.productId);
+                });
+
+                container.appendChild(div);
+            });
+        }
+
+        // --- NEW: Filter and Sort Logic ---
+        function applyFiltersAndSort() {
+            // 1. Get the current product list (start with all products for now, no filtering)
+            let filteredProducts = [...allProducts]; // Shallow copy
+
+            // TODO: (Future) Add filtering logic here using checkboxes.
+            // Example:
+            // const selectedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value);
+            // if (selectedCategories.length > 0) {
+            //     filteredProducts = filteredProducts.filter(p => selectedCategories.includes(p.category));
+            // }
+
+            // 2. Get the current sort selection
+            const sortMethod = sortSelect.value;
+
+            // 3. Apply Sorting
+            switch (sortMethod) {
+                case 'price-asc':
+                    filteredProducts.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+                    break;
+                case 'price-desc':
+                    filteredProducts.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+                    break;
+                case 'name-asc':
+                    filteredProducts.sort((a, b) => (a.title || a.product_category_name || "").localeCompare(b.title || b.product_category_name || ""));
+                    break;
+                case 'name-desc':
+                    filteredProducts.sort((a, b) => (b.title || b.product_category_name || "").localeCompare(a.title || a.product_category_name || ""));
+                    break;
+                case 'default':
+                default:
+                    // No sorting, use the order from the API
+                    break;
+            }
+
+            // 4. Render the final list
+            renderProducts(filteredProducts);
+        }
+
+        // --- Load Product Grid (Initial Fetch) ---
         async function loadProducts() {
             container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">
                                        <svg class="animate-spin h-5 w-5 mr-3 inline text-indigo-600" viewBox="0 0 24 24"></svg>
@@ -165,52 +293,24 @@
                                    </div>`;
 
             try {
-                // *** FIX: Correct API URL construction ***
                 const res = await fetch(`${API_URL}api/products`);
                 
                 if (!res.ok) {
                     throw new Error(`HTTP ${res.status}. Check your API deployment.`);
                 }
                 const data = await res.json();
-
-                container.innerHTML = "";
                 
-                // --- Empty Catalog Message (Styled) ---
                 if (!data || data.length === 0) {
-                    container.innerHTML = `<div class="col-span-full bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-6 rounded-lg text-center">
-                        <p class="text-xl font-bold">Oops! Our shelves are empty right now. 😔</p>
-                        <p>We're currently stocking the store. Please check back later!</p>
-                    </div>`;
+                    allProducts = []; // Set global product list to empty
+                    renderProducts(allProducts); // Render the empty message
                     return;
                 }
                 
-                // --- Render Products ---
-                (data || []).forEach(p => {
-                    const div = document.createElement("div");
-                    div.className = "product";
-                    div.dataset.productId = p.sku || p.product_id; 
-
-                    const title = p.title || p.product_category_name || "Untitled";
-                    const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "(no price)";
-                    
-                    div.innerHTML = `
-                        <div class="product-image">
-                            [Product Image Placeholder]
-                        </div>
-                        <div class="product-info">
-                            <span class="text-lg font-semibold text-gray-800">${title}</span>
-                            <span class="text-sm text-gray-500 mb-2">SKU: ${p.sku || p.product_id || "N/A"}</span>
-                            <span class="product-price">${price}</span>
-                        </div>
-                    `;
-                    
-                    // Add click handler to open the modal and fetch details
-                    div.addEventListener('click', () => {
-                        fetchProductDetails(div.dataset.productId);
-                    });
-
-                    container.appendChild(div);
-                });
+                // Store the raw product data globally
+                allProducts = data || [];
+                
+                // Apply any initial sort/filter (default)
+                applyFiltersAndSort(); 
 
             } catch (err) {
                 console.error(err);
