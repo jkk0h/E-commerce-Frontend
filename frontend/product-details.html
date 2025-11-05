@@ -6,7 +6,7 @@
     <title>Product Details | The Next-Gen Store</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for the size selector and review stars */
+        /* Custom styles for the size selector */
         .size-option {
             border: 1px solid #e5e7eb;
             transition: all 0.2s;
@@ -27,7 +27,8 @@
 
         <header class="h-16 flex items-center border-b border-gray-100 mb-8">
             <h1 class="text-2xl font-bold text-indigo-600">The Store</h1>
-            <a href="index.html" class="ml-auto text-sm text-indigo-600 hover:text-indigo-800">← Back to Store</a>
+            <a href="cart.html" class="ml-auto text-sm text-black font-semibold hover:text-indigo-600">View Bag</a>
+            <a href="index.html" class="ml-4 text-sm text-indigo-600 hover:text-indigo-800">← Back to Store</a>
         </header>
 
         <div id="product-content-area" class="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -84,6 +85,47 @@
             return urlParams.get('id');
         }
 
+        // =========================================================
+        // CART MANAGER FUNCTIONS (Uses localStorage)
+        // =========================================================
+        
+        // Utility to load cart items from browser storage
+        function getCart() {
+            try {
+                return JSON.parse(localStorage.getItem('cartItems')) || [];
+            } catch (e) {
+                console.error("Failed to parse cart data from localStorage:", e);
+                return [];
+            }
+        }
+
+        // Utility to save cart items to browser storage
+        function saveCart(cart) {
+            localStorage.setItem('cartItems', JSON.stringify(cart));
+        }
+
+        // Main function called by the 'Add to Bag' button
+        function addToCart(id, name, price) {
+            // Ensure price is a valid number before using
+            const itemPrice = parseFloat(price) || 0; 
+
+            let cart = getCart();
+            const existingItem = cart.find(item => item.id === id);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ id, name, price: itemPrice, quantity: 1 });
+            }
+
+            saveCart(cart);
+            
+            // Simple visual feedback and redirection hint
+            alert(`Added 1x ${name} to your bag. Check your bag at the 'View Bag' link!`);
+            // Optional: window.location.href = 'cart.html'; 
+        }
+
+
         // --- Render Product Details HTML ---
         function renderProduct(p) {
             const title = p.title || p.product_category_name || "Untitled Product";
@@ -91,6 +133,11 @@
             const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "Price TBD";
             const description = p.product_description || "Performance-ready innovation, engineered for the city. This product elevates your everyday.";
             
+            // Safely get ID and name for the addToCart function call
+            const productId = p.sku || p.product_id || 'UNKNOWN';
+            const productName = title.replace(/'/g, "\\'"); // Escape quotes for JS string literal
+            const productPrice = p.price != null ? parseFloat(p.price).toFixed(2) : '0';
+
             // Note: Specifications are created dynamically from available product keys
             let specsHTML = `<div class="space-y-1 text-sm text-gray-600 mt-4">`;
             if (p.product_category_name) specsHTML += `<p><strong>Category:</strong> ${p.product_category_name}</p>`;
@@ -101,7 +148,7 @@
 
             const html = `
                 <div class="lg:sticky lg:top-10 h-[500px] bg-gray-100 flex items-center justify-center rounded-lg">
-                    <span class="text-gray-400 text-xl font-semibold">LARGE IMAGE AREA</span>
+                    <span class="text-gray-400 text-xl font-semibold"></span>
                 </div>
 
                 <div>
@@ -121,7 +168,7 @@
                         </div>
                     </div>
 
-                    <button onclick="alert('Added ${title} to Bag!')" class="w-full bg-black text-white py-3 rounded-full font-bold text-lg hover:bg-gray-700 transition-colors mb-2">
+                    <button onclick="addToCart('${productId}', '${productName}', ${productPrice})" class="w-full bg-black text-white py-3 rounded-full font-bold text-lg hover:bg-gray-700 transition-colors mb-2">
                         Add to Bag
                     </button>
                     <button class="w-full bg-white text-black py-3 rounded-full font-bold text-lg border-2 border-gray-300 hover:border-black transition-colors">
@@ -138,7 +185,7 @@
                     
                     <div class="mt-6 text-sm">
                         <p class="text-green-600 font-semibold">Free Delivery and Returns</p>
-                        <p class="text-gray-500">Style: ${p.sku || p.product_id || 'N/A'}</p>
+                        <p class="text-gray-500">Style: ${productId}</p>
                     </div>
                 </div>
             `;
