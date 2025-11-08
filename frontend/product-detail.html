@@ -1,234 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Details | The Next-Gen Store</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom styles for the size selector */
-        .size-option {
-            border: 1px solid #e5e7eb;
-            transition: all 0.2s;
-        }
-        .size-option:hover {
-            border-color: #1f2937; /* Darker border on hover */
-        }
-        .size-option.selected {
-            border-color: #1f2937;
-            border-width: 2px;
-            box-shadow: 0 0 0 1px #1f2937;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details | The Next-Gen Store</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="./script/config.js"></script>
 </head>
 <body class="bg-white text-gray-800">
 
-    <div class="max-w-7xl mx-auto p-6 md:p-10">
+  <div class="max-w-7xl mx-auto p-6 md:p-10">
+    <header class="h-16 flex items-center border-b border-gray-100 mb-8">
+      <h1 class="text-2xl font-bold text-indigo-600">SIT Store</h1>
+      <a href="cart.html" class="ml-auto text-sm text-black font-semibold hover:text-indigo-600">View Bag</a>
+      <a href="index.html" class="ml-4 text-sm text-indigo-600 hover:text-indigo-800">← Back to Store</a>
+    </header>
 
-        <header class="h-16 flex items-center border-b border-gray-100 mb-8">
-            <h1 class="text-2xl font-bold text-indigo-600">SIT Store</h1>
-            <a href="cart.html" class="ml-auto text-sm text-black font-semibold hover:text-indigo-600">View Bag</a>
-            <a href="index.html" class="ml-4 text-sm text-indigo-600 hover:text-indigo-800">← Back to Store</a>
-        </header>
-
-        <div id="product-content-area" class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div id="loading-state" class="col-span-full text-center py-20 text-gray-500">
-                <svg class="animate-spin h-8 w-8 mr-3 inline text-indigo-600" viewBox="0 0 24 24"></svg>
-                <p class="mt-2 text-xl">Loading Product Details...</p>
-            </div>
-            
-            </div>
-
-        <div class="mt-20 border-t border-gray-200 pt-10">
-            <h2 class="text-3xl font-bold mb-8">Reviews (<span id="review-count">0</span>)</h2>
-            <div id="reviews-section" class="space-y-6">
-                <div class="border-b pb-4">
-                    <div class="flex items-center text-yellow-500 mb-1">
-                        <span class="mr-2">★★★★★</span>
-                        <span class="text-sm text-gray-500">John D. - May 2024</span>
-                    </div>
-                    <h4 class="font-semibold text-lg mb-1">Great Comfort! (Placeholder Review)</h4>
-                    <p class="text-gray-600 text-sm">This is where detailed, user-submitted review comments would go. Since the API data doesn't have a dedicated reviews array, we use placeholders.</p>
-                </div>
-            </div>
-
-            <h2 class="text-3xl font-bold mt-16 mb-8">You might also like</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                <div class="bg-gray-50 p-4 rounded-lg text-center">Related Item 1</div>
-                <div class="bg-gray-50 p-4 rounded-lg text-center">Related Item 2</div>
-                <div class="bg-gray-50 p-4 rounded-lg text-center">Related Item 3</div>
-                <div class="bg-gray-50 p-4 rounded-lg text-center">Related Item 4</div>
-            </div>
-        </div>
+    <div id="product-content-area" class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div id="loading-state" class="col-span-full text-center py-20 text-gray-500">
+        <p class="mt-2 text-xl">Loading Product Details...</p>
+      </div>
     </div>
+  </div>
 
-    <footer class="bg-gray-900 text-white mt-20 py-10">
-        <div class="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-5 gap-8">
-            <div><h4 class="font-bold mb-3">Resources</h4><ul class="space-y-1 text-sm text-gray-400"><li>Find A Store</li><li>Become A Member</li><li>Product Advice</li></ul></div>
-            <div><h4 class="font-bold mb-3">Help</h4><ul class="space-y-1 text-sm text-gray-400"><li>Get Help</li><li>Order Status</li><li>Delivery</li></ul></div>
-            <div><h4 class="font-bold mb-3">Company</h4><ul class="space-y-1 text-sm text-gray-400"><li>About The Store</li><li>Careers</li><li>Sustainability</li></ul></div>
+  <script>
+    const API_ROOT = window.getApiUrl ? window.getApiUrl("") : (window.API_URL || "");
+    function api(path) { return (API_ROOT && !API_ROOT.endsWith("/") ? API_ROOT + "/" : API_ROOT) + (path.startsWith("/") ? path.slice(1) : path); }
+
+    const contentArea = document.getElementById("product-content-area");
+    const loadingState = document.getElementById("loading-state");
+
+    function getProductIdFromUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('id');
+    }
+
+    function getCart() {
+      try { return JSON.parse(localStorage.getItem('cartItems')) || []; } catch { return []; }
+    }
+    function saveCart(cart) { localStorage.setItem('cartItems', JSON.stringify(cart)); }
+
+    function addToCart(id, name, price) {
+      const itemPrice = parseFloat(price) || 0;
+      let cart = getCart();
+      const existingItem = cart.find(item => item.id === id);
+      if (existingItem) existingItem.quantity += 1;
+      else cart.push({ id, name, price: itemPrice, quantity: 1 });
+      saveCart(cart);
+      alert(`Added 1x ${name} to your bag.`);
+    }
+
+    function renderProduct(p) {
+      const title = p.title || p.product_category_name || "Untitled Product";
+      const subtitle = p.review_comment ? p.review_comment.substring(0,50)+'...' : "Check out the latest drop.";
+      const priceText = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "Price TBD";
+      const description = p.product_description || "Product description placeholder.";
+      const productId = p.sku || p.product_id || p.id || 'UNKNOWN';
+      const productName = title.replace(/'/g, "\\'");
+      const productPrice = p.price != null ? Number(p.price).toFixed(2) : '0';
+
+      let specsHTML = `<div class="space-y-1 text-sm text-gray-600 mt-4">`;
+      if (p.product_category_name) specsHTML += `<p><strong>Category:</strong> ${p.product_category_name}</p>`;
+      if (p.freight_value != null) specsHTML += `<p><strong>Shipping Cost:</strong> $${parseFloat(p.freight_value).toFixed(2)}</p>`;
+      if (p.product_weight_g != null) specsHTML += `<p><strong>Weight:</strong> ${p.product_weight_g} g</p>`;
+      specsHTML += `</div>`;
+
+      const html = `
+        <div class="lg:sticky lg:top-10 h-[500px] bg-gray-100 flex items-center justify-center rounded-lg">
+          <span class="text-gray-400 text-xl font-semibold"></span>
         </div>
-        <div class="max-w-7xl mx-auto px-6 border-t border-gray-700 mt-8 pt-4 text-xs text-gray-500 flex justify-between">
-            <p>&copy; 2024 The Next-Gen Store, Inc. All Rights Reserved.</p>
+
+        <div>
+          <h2 class="text-xl font-normal text-gray-500">${subtitle}</h2>
+          <h1 class="text-4xl font-extrabold mt-1 mb-2">${title}</h1>
+          <p class="text-2xl font-semibold mb-6">${priceText}</p>
+          <hr class="my-6">
+          <div class="mb-6">
+            <p class="font-semibold mb-2">Select Size</p>
+            <div class="grid grid-cols-4 gap-2">
+              <button class="size-option py-3 text-sm font-medium rounded-lg">US 8</button>
+              <button class="size-option py-3 text-sm font-medium rounded-lg">US 9</button>
+              <button class="size-option py-3 text-sm font-medium rounded-lg">US 10</button>
+              <button class="size-option py-3 text-sm font-medium rounded-lg">US 11</button>
+            </div>
+          </div>
+
+          <button onclick="addToCart('${productId}', '${productName}', ${productPrice})" class="w-full bg-black text-white py-3 rounded-full font-bold text-lg hover:bg-gray-700 transition-colors mb-2">
+            Add to Bag
+          </button>
+          <button class="w-full bg-white text-black py-3 rounded-full font-bold text-lg border-2 border-gray-300 hover:border-black transition-colors">
+            Favorite
+          </button>
+          <p class="text-xs text-red-500 mt-2">This product is excluded from site promotions and discounts.</p>
+          <hr class="my-6">
+          <p class="text-gray-700 leading-relaxed mb-6">${description}</p>
+          <h3 class="font-bold text-lg mb-2">Product Specifications</h3>
+          ${specsHTML}
+          <div class="mt-6 text-sm">
+            <p class="text-green-600 font-semibold">Free Delivery and Returns</p>
+            <p class="text-gray-500">Style: ${productId}</p>
+          </div>
         </div>
-    </footer>
+      `;
 
+      contentArea.innerHTML = html;
+    }
 
-    <script>
-        const API_URL = "https://e-commerce-frontend-production-f9c0.up.railway.app/"; 
-        const contentArea = document.getElementById("product-content-area");
-        const loadingState = document.getElementById("loading-state");
+    async function loadProductDetails() {
+      const productId = getProductIdFromUrl();
+      if (!productId) {
+        loadingState.innerHTML = `<p class="text-xl text-red-500">Error: No product ID specified in the URL.</p>`;
+        return;
+      }
+      try {
+        const res = await fetch(api(`/api/products/${encodeURIComponent(productId)}`));
+        if (!res.ok) throw new Error(`Details for ID ${productId} not found (HTTP ${res.status}).`);
+        const json = await res.json();
+        // unwrap shapes: {success, product}, or just product
+        const product = json?.product ?? json;
+        loadingState.style.display = 'none';
+        renderProduct(product);
+      } catch (err) {
+        console.error("Error fetching product details:", err);
+        loadingState.innerHTML = `<p class="text-xl text-red-500">Failed to load product details: ${err.message}</p>`;
+        loadingState.style.display = 'block';
+      }
+    }
 
-        // --- Utility to get Product ID from URL ---
-        function getProductIdFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('id');
-        }
-
-        // =========================================================
-        // CART MANAGER FUNCTIONS (Uses localStorage)
-        // =========================================================
-        
-        // Utility to load cart items from browser storage
-        function getCart() {
-            try {
-                return JSON.parse(localStorage.getItem('cartItems')) || [];
-            } catch (e) {
-                console.error("Failed to parse cart data from localStorage:", e);
-                return [];
-            }
-        }
-
-        // Utility to save cart items to browser storage
-        function saveCart(cart) {
-            localStorage.setItem('cartItems', JSON.stringify(cart));
-        }
-
-        // Main function called by the 'Add to Bag' button
-        function addToCart(id, name, price) {
-            // Ensure price is a valid number before using
-            const itemPrice = parseFloat(price) || 0; 
-
-            let cart = getCart();
-            const existingItem = cart.find(item => item.id === id);
-
-            if (existingItem) {
-                existingItem.quantity += 1;
-            } else {
-                cart.push({ id, name, price: itemPrice, quantity: 1 });
-            }
-
-            saveCart(cart);
-            
-            // Simple visual feedback and redirection hint
-            alert(`Added 1x ${name} to your bag. Check your bag at the 'View Bag' link!`);
-            // Optional: window.location.href = 'cart.html'; 
-        }
-
-
-        // --- Render Product Details HTML ---
-        function renderProduct(p) {
-            const title = p.title || p.product_category_name || "Untitled Product";
-            const subtitle = p.review_comment ? p.review_comment.substring(0, 50) + '...' : "Check out the latest drop.";
-            const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "Price TBD";
-            const description = p.product_description || "Performance-ready innovation, engineered for the city. This product elevates your everyday.";
-            
-            // Safely get ID and name for the addToCart function call
-            const productId = p.sku || p.product_id || 'UNKNOWN';
-            const productName = title.replace(/'/g, "\\'"); // Escape quotes for JS string literal
-            const productPrice = p.price != null ? parseFloat(p.price).toFixed(2) : '0';
-
-            // Note: Specifications are created dynamically from available product keys
-            let specsHTML = `<div class="space-y-1 text-sm text-gray-600 mt-4">`;
-            if (p.product_category_name) specsHTML += `<p><strong>Category:</strong> ${p.product_category_name}</p>`;
-            if (p.freight_value != null) specsHTML += `<p><strong>Shipping Cost:</strong> $${parseFloat(p.freight_value).toFixed(2)}</p>`;
-            if (p.product_weight_g != null) specsHTML += `<p><strong>Weight:</strong> ${p.product_weight_g} g</p>`;
-            specsHTML += `</div>`;
-
-
-            const html = `
-                <div class="lg:sticky lg:top-10 h-[500px] bg-gray-100 flex items-center justify-center rounded-lg">
-                    <span class="text-gray-400 text-xl font-semibold"></span>
-                </div>
-
-                <div>
-                    <h2 class="text-xl font-normal text-gray-500">${subtitle}</h2>
-                    <h1 class="text-4xl font-extrabold mt-1 mb-2">${title}</h1>
-                    <p class="text-2xl font-semibold mb-6">${price}</p>
-                    
-                    <hr class="my-6">
-
-                    <div class="mb-6">
-                        <p class="font-semibold mb-2">Select Size</p>
-                        <div class="grid grid-cols-4 gap-2">
-                            <button class="size-option py-3 text-sm font-medium rounded-lg hover:bg-gray-50 selected">US 8</button>
-                            <button class="size-option py-3 text-sm font-medium rounded-lg hover:bg-gray-50">US 9</button>
-                            <button class="size-option py-3 text-sm font-medium rounded-lg hover:bg-gray-50">US 10</button>
-                            <button class="size-option py-3 text-sm font-medium rounded-lg hover:bg-gray-50">US 11</button>
-                        </div>
-                    </div>
-
-                    <button onclick="addToCart('${productId}', '${productName}', ${productPrice})" class="w-full bg-black text-white py-3 rounded-full font-bold text-lg hover:bg-gray-700 transition-colors mb-2">
-                        Add to Bag
-                    </button>
-                    <button class="w-full bg-white text-black py-3 rounded-full font-bold text-lg border-2 border-gray-300 hover:border-black transition-colors">
-                        Favorite
-                    </button>
-                    <p class="text-xs text-red-500 mt-2">This product is excluded from site promotions and discounts.</p>
-                    
-                    <hr class="my-6">
-
-                    <p class="text-gray-700 leading-relaxed mb-6">${description}</p>
-                    
-                    <h3 class="font-bold text-lg mb-2">Product Specifications</h3>
-                    ${specsHTML}
-                    
-                    <div class="mt-6 text-sm">
-                        <p class="text-green-600 font-semibold">Free Delivery and Returns</p>
-                        <p class="text-gray-500">Style: ${productId}</p>
-                    </div>
-                </div>
-            `;
-            
-            // Insert the new HTML and hide the loading state
-            contentArea.innerHTML = html; 
-        }
-
-        // --- Main Data Fetch Function ---
-        async function loadProductDetails() {
-            const productId = getProductIdFromUrl();
-            
-            if (!productId) {
-                loadingState.innerHTML = `<p class="text-xl text-red-500">Error: No product ID specified in the URL.</p>`;
-                return;
-            }
-
-            // Show loading state while fetching
-            loadingState.style.display = 'block';
-
-            try {
-                const res = await fetch(`${API_URL}api/products/${productId}`);
-                
-                if (!res.ok) {
-                    throw new Error(`Details for ID ${productId} not found (HTTP ${res.status}).`);
-                }
-                const productData = await res.json();
-                
-                // Hide loading state
-                loadingState.style.display = 'none';
-
-                // Render the detailed page content
-                renderProduct(productData);
-
-            } catch (err) {
-                console.error("Error fetching product details:", err);
-                loadingState.innerHTML = `<p class="text-xl text-red-500">Failed to load product details: ${err.message}</p>`;
-                loadingState.style.display = 'block';
-            }
-        }
-
-        // Initialize the page load
-        document.addEventListener('DOMContentLoaded', loadProductDetails);
-    </script>
+    document.addEventListener('DOMContentLoaded', loadProductDetails);
+  </script>
 </body>
 </html>

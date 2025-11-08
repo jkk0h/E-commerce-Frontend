@@ -1,360 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌟 SIT Store | Filter & Sort 🛒</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* --- AESTHETIC CHANGES START HERE --- */
-        
-        /* New Color Palette: Base is soft gray, branding is Indigo (Blue/Violet) */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f7f9; /* Off-White/Soft Gray */
-            color: #1f2937;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>E-commerce — Products</title>
 
-        /* Product Grid Container (No change to layout, just colors) */
-        #products {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 24px;
-            margin-top: 24px;
-        }
+  <!-- Global styles (make sure styles.css exists) -->
+  <link rel="stylesheet" href="styles.css">
 
-        /* Individual Product Card */
-        .product { 
-            padding: 0; 
-            border: none; /* Removed default border */
-            border-radius: 12px; /* Smoother corners */
-            overflow: hidden; 
-            cursor: pointer;
-            /* Enhanced Shadow */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background-color: white;
-        }
+  <!-- Config must be loaded before page scripts -->
+  <script src="./script/config.js"></script>
 
-        .product:hover {
-            transform: translateY(-8px); /* More noticeable lift */
-            /* Stronger Hover Shadow */
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        /* Product Image Placeholder */
-        .product-image {
-            background: #e0f2f1; /* Soft Teal background */
-            height: 180px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9em;
-            color: #0d9488; /* Darker Teal text */
-            font-weight: 600;
-        }
-
-        .product-info {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-
-        /* Price Color - Changed to Teal for accent */
-        .product-price {
-            font-weight: bold;
-            color: #0d9488; /* Teal 600 */
-            font-size: 1.4em; /* Slightly larger price */
-            margin-top: 10px;
-        }
-
-        /* Modal Styling (using Tailwind classes where possible) */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6); /* Darker backdrop */
-        }
-        
-        /* Custom Hover Dropdown for Future Filtering */
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: white;
-            min-width: 250px;
-            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.3); /* Stronger shadow */
-            z-index: 10; /* Increased z-index */
-            padding: 12px;
-            border-radius: 8px; /* Slightly more rounded */
-            border: 1px solid #e0e7ff; /* Soft indigo border */
-        }
-
-        /* --- AESTHETIC CHANGES END HERE --- */
-    </style>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; background:#f7fafc; color:#111827; }
+    .container { max-width:1100px; margin:32px auto; padding:0 16px; }
+    .header { display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .search-row { display:flex; gap:12px; align-items:center; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:16px; margin-top:20px; }
+    .card { background:white; border-radius:8px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,0.06); display:flex; flex-direction:column; }
+    .card img { width:100%; height:160px; object-fit:cover; border-radius:6px; }
+    .card h3 { margin:10px 0 6px; font-size:16px; }
+    .price { color:#111827; font-weight:700; margin-bottom:8px; }
+    .btn { display:inline-block; text-align:center; padding:8px 10px; border-radius:8px; text-decoration:none; color:white; background:#4f46e5; }
+    .small-muted { color:#6b7280; font-size:13px; }
+    @media (max-width:640px){ .header { flex-direction:column; align-items:stretch; gap:8px; } }
+  </style>
 </head>
+<body>
 
-<body class="p-6">
-    
-    <div class="absolute top-6 right-6 z-20 flex space-x-3">
-        
-        <a href="index.html" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 shadow-md">
-            Home 🏠
-        </a>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1 style="margin:0 0 6px">Shop</h1>
+        <div class="small-muted">Browse products — merged index</div>
+      </div>
 
-        <a href="cart.html" id="cart-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 shadow-lg flex items-center">
-            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-            Cart
-        </a>
-
-        <a href="product-detail.html?id=123" id="detail-page-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 shadow-lg">
-            Product Detail
-        </a>
-
-        <a href="checkout.html" id="checkout-btn" class="bg-violet-700 hover:bg-violet-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 shadow-lg">
-            Checkout
-        </a>
-        
-        <a href="commands.html" id="commands-btn" class="bg-violet-700 hover:bg-violet-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 shadow-lg">
-            Go to Commands
-        </a>
+      <div class="search-row">
+        <input id="searchInput" type="search" placeholder="Search products or SKU..." style="padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb; min-width:220px;">
+        <select id="sortSelect" style="padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb;">
+          <option value="">Sort</option>
+          <option value="price-asc">Price: Low → High</option>
+          <option value="price-desc">Price: High → Low</option>
+          <option value="name-asc">Name: A → Z</option>
+          <option value="name-desc">Name: Z → A</option>
+        </select>
+        <a class="btn" href="cart.html" style="margin-left:8px">View Cart</a>
+      </div>
     </div>
 
+    <div id="productsContainer" class="grid" aria-live="polite"></div>
 
-    <div class="max-w-7xl mx-auto bg-white p-10 rounded-2xl shadow-3xl relative z-10"> <h1 class="text-5xl font-extrabold text-center text-indigo-700 mb-2">🌟 The SIT Store Catalog 🛍️</h1> <p class="text-center text-gray-500 mb-12 max-w-3xl mx-auto text-lg">Browse, filter, and sort our premium products loaded directly from the API.</p>
+    <div id="emptyMessage" style="display:none; margin-top:20px; color:#6b7280;">
+      No products match your search.
+    </div>
+  </div>
 
+  <script>
+    (function () {
+      // Build API helper from config.js
+      const API_ROOT = window.getApiUrl ? window.getApiUrl("") : (window.API_URL || "");
+      function api(path) { return (API_ROOT && !API_ROOT.endsWith("/") ? API_ROOT + "/" : API_ROOT) + (path.startsWith("/") ? path.slice(1) : path); }
 
-        <div id="filter-sort-bar" class="flex justify-between items-center bg-indigo-50 p-4 rounded-xl border border-indigo-200 mb-8">
-            
-            <div class="relative inline-block text-left dropdown">
-                <button class="inline-flex justify-center items-center rounded-lg border border-indigo-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-indigo-700 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    <svg class="w-4 h-4 mr-1 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414A1 1 0 0011 15.586V21h2v-5.414a1 1 0 00-.293-.707L7 6.586A1 1 0 017.293 6H20a1 1 0 00.707-.293l-4.707-4.707A1 1 0 0015.586 2H8.414A1 1 0 007.707 2.293L3 7v10a1 1 0 001 1h16a1 1 0 001-1z"></path></svg>
-                    Filters (Hover for Checkboxes)
-                </button>
-                <div class="dropdown-content">
-                    <h4 class="text-sm font-bold text-indigo-800 mb-2">Filter by Category:</h4>
-                    <div class="space-y-1">
-                        <div class="flex items-center">
-                            <input type="checkbox" id="cat1" name="category" value="shoes" class="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500">
-                            <label for="cat1" class="ml-2 text-sm text-gray-700">Shoes</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="cat2" name="category" value="apparel" class="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500">
-                            <label for="cat2" class="ml-2 text-sm text-gray-700">Apparel</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="cat3" name="category" value="accessories" class="h-4 w-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500">
-                            <label for="cat3" class="ml-2 text-sm text-gray-700">Accessories</label>
-                        </div>
-                    </div>
-                    <button onclick="alert('Filtering functionality needs API support!')" class="mt-4 w-full bg-cyan-600 text-white py-1 text-sm rounded hover:bg-cyan-700 shadow-md">Apply Filters</button>
-                </div>
+      const container = document.getElementById("productsContainer");
+      const searchInput = document.getElementById("searchInput");
+      const sortSelect = document.getElementById("sortSelect");
+      const emptyMessage = document.getElementById("emptyMessage");
+
+      let allProducts = [];
+
+      const getId    = p => p?.sku ?? p?.product_id ?? p?.id ?? "";
+      const getName  = p => p?.title ?? p?.product_category_name ?? p?.name ?? "Unnamed product";
+      const getPrice = p => { const raw = p?.price ?? p?.value ?? p?.price_value ?? 0; const n = Number.parseFloat(raw); return Number.isFinite(n) ? n : 0; };
+      const getImage = p => p?.image_url ?? p?.image ?? p?.images?.[0] ?? "assets/placeholder.png";
+
+      async function loadProducts() {
+        try {
+          const res = await fetch(api("/api/products"));
+          if (!res.ok) throw new Error("Failed to fetch products: " + res.status);
+          const json = await res.json();
+          if (Array.isArray(json)) allProducts = json;
+          else if (Array.isArray(json?.data)) allProducts = json.data;
+          else if (Array.isArray(json?.results)) allProducts = json.results;
+          else allProducts = Array.isArray(Object.values(json)) ? Object.values(json).flat() : [];
+        } catch (err) {
+          console.error("loadProducts error:", err);
+          allProducts = [];
+        }
+        applyFiltersAndSort();
+      }
+
+      function applyFiltersAndSort() {
+        const q = (searchInput?.value || "").trim().toLowerCase();
+        let list = allProducts.filter(p => {
+          const name = (getName(p) || "").toLowerCase();
+          const id = String(getId(p) || "").toLowerCase();
+          return !q || name.includes(q) || id.includes(q);
+        });
+
+        switch (sortSelect?.value) {
+          case "price-asc": list.sort((a,b) => getPrice(a) - getPrice(b)); break;
+          case "price-desc": list.sort((a,b) => getPrice(b) - getPrice(a)); break;
+          case "name-asc": list.sort((a,b) => getName(a).localeCompare(getName(b))); break;
+          case "name-desc": list.sort((a,b) => getName(b).localeCompare(getName(a))); break;
+        }
+
+        renderProducts(list);
+      }
+
+      function renderProducts(items) {
+        if (!items || items.length === 0) { container.innerHTML = ""; emptyMessage.style.display = "block"; return; }
+        emptyMessage.style.display = "none";
+
+        container.innerHTML = items.map(p => {
+          const id = encodeURIComponent(getId(p));
+          const name = escapeHtml(getName(p));
+          const price = getPrice(p).toFixed(2);
+          const image = escapeAttr(getImage(p));
+          return `
+            <div class="card" data-id="${id}">
+              <img src="${image}" alt="${name}" onerror="this.onerror=null;this.src='assets/placeholder.png'">
+              <h3>${name}</h3>
+              <div class="small-muted">SKU: ${id}</div>
+              <div class="price">$${price}</div>
+              <a class="btn" href="product-detail.html?id=${id}">View details</a>
             </div>
+          `;
+        }).join("");
+      }
 
-            <div class="flex items-center space-x-2">
-                <label for="sort-select" class="text-sm font-medium text-indigo-700">Sort By:</label>
-                <select id="sort-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm rounded-md shadow-sm">
-                    <option value="default">Default</option>
-                    <option value="price-asc">Price: Low to High</option>
-                    <option value="price-desc">Price: High to Low</option>
-                    <option value="name-asc">Name: A to Z</option>
-                    <option value="name-desc">Name: Z to A</option>
-                </select>
-            </div>
-        </div>
+      function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+      function escapeAttr(s){ return String(s).replace(/"/g, '&quot;'); }
 
-        <div class="bg-indigo-50 border-l-4 border-indigo-400 text-indigo-900 p-8 rounded-xl mb-8 shadow-inner">
-            <h2 class="text-3xl font-bold mb-6 text-indigo-800">Available Products</h2>
-            <div id="products">Loading…</div>
-        </div>
+      searchInput?.addEventListener("input", debounce(applyFiltersAndSort, 180));
+      sortSelect?.addEventListener("change", applyFiltersAndSort);
 
-    </div>
+      function debounce(fn, wait) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); }; }
 
-    <div id="productModal" class="modal">
-        <div class="modal-content bg-white p-8 rounded-xl shadow-2xl relative top-20 mx-auto w-11/12 max-w-xl border-t-8 border-cyan-500">
-            <span class="close text-gray-500 hover:text-cyan-700 absolute top-3 right-5 text-3xl font-bold cursor-pointer">&times;</span>
-            <h2 class="text-2xl font-bold text-indigo-700 mb-4">Product Details</h2>
-            <div id="modalDetails" class="text-gray-600">Loading product details...</div>
-            <button class="add-to-cart bg-cyan-600 hover:bg-cyan-700 text-white py-3 px-6 rounded-full font-semibold transition-colors duration-300 mt-6 shadow-lg" id="addToCartButton">Add to Cart</button>
-            <p class="text-xs text-gray-400 mt-2">(Cart functionality is a demonstration placeholder.)</p>
-        </div>
-    </div>
-
-    <script>
-        const API_URL = "https://e-commerce-frontend-production-f9c0.up.railway.app/"; 
-        const container = document.getElementById("products");
-        const sortSelect = document.getElementById("sort-select");
-
-        // Global array to hold ALL products loaded from the API
-        let allProducts = [];
-
-        // --- Event Listeners for Modal (Unchanged) ---
-        const modal = document.getElementById("productModal");
-        const modalDetails = document.getElementById("modalDetails");
-        const closeBtn = document.querySelector(".close");
-        const cartBtn = document.getElementById("addToCartButton");
-
-        closeBtn.onclick = function() { modal.style.display = "none"; }
-        window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
-        cartBtn.onclick = function() {
-            alert(`Added item to cart! (Placeholder function)`);
-            modal.style.display = "none";
-        }
-
-        // Add event listener for the Sort dropdown
-        sortSelect.addEventListener('change', applyFiltersAndSort);
-
-        // --- Utility Functions (Unchanged) ---
-        function displayError(message) {
-            container.innerHTML = `<div class="col-span-full bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
-                <p class="font-bold">Error Loading Catalog</p>
-                <p>${message}</p>
-            </div>`;
-        }
-        
-        async function fetchProductDetails(productId) {
-            modalDetails.innerHTML = "Loading...";
-            modal.style.display = "block";
-            try {
-                const res = await fetch(`${API_URL}api/products/${productId}`);
-                if (!res.ok) throw new Error(`Details for ${productId} not found (HTTP ${res.status}).`);
-                const p = await res.json();
-                const title = p.title || p.product_category_name || "Untitled Product";
-                const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "Price TBD";
-                const description = p.product_description || p.review_comment || "No detailed description available.";
-                modalDetails.innerHTML = `
-                    <h3 class="text-xl font-semibold mb-2">${title}</h3>
-                    <p class="text-sm"><strong>SKU:</strong> ${p.sku || p.product_id || "N/A"}</p>
-                    <p class="text-3xl font-extrabold text-cyan-600 my-3">${price}</p>
-                    <hr class="my-4">
-                    <p>${description}</p>
-                `;
-            } catch (err) {
-                modalDetails.innerHTML = `<p class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">Failed to load details: ${err.message}</p>`;
-                console.error("Error fetching product details:", err);
-            }
-        }
-
-        // --- NEW: Render the Products to the Grid ---
-        function renderProducts(productsToDisplay) {
-            container.innerHTML = ""; // Clear existing products
-            
-            if (!productsToDisplay || productsToDisplay.length === 0) {
-                 container.innerHTML = `<div class="col-span-full bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-6 rounded-lg text-center">
-                    <p class="text-xl font-bold">No products match the current filters. 😔</p>
-                    <p>Try adjusting your sorting or filtering selections.</p>
-                </div>`;
-                return;
-            }
-            
-            productsToDisplay.forEach(p => {
-                const div = document.createElement("div");
-                div.className = "product";
-                div.dataset.productId = p.sku || p.product_id; 
-
-                const title = p.title || p.product_category_name || "Untitled";
-                const price = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "(no price)";
-                
-                div.innerHTML = `
-                    <div class="product-image">
-                        [Product Image Placeholder]
-                    </div>
-                    <div class="product-info">
-                        <span class="text-lg font-semibold text-gray-800">${title}</span>
-                        <span class="text-sm text-gray-500 mb-2">SKU: ${p.sku || p.product_id || "N/A"}</span>
-                        <span class="product-price">${price}</span>
-                    </div>
-                `;
-                
-                div.addEventListener('click', () => {
-                    // Changed this line to use the new navigation logic instead of the modal
-                    const productId = p.sku || p.product_id;
-                    window.location.href = `product-detail.html?id=${productId}`;
-                });
-
-                container.appendChild(div);
-            });
-        }
-
-        // --- NEW: Filter and Sort Logic ---
-        function applyFiltersAndSort() {
-            // 1. Get the current product list (start with all products for now, no filtering)
-            let filteredProducts = [...allProducts]; // Shallow copy
-
-            // TODO: (Future) Add filtering logic here using checkboxes.
-
-            // 2. Get the current sort selection
-            const sortMethod = sortSelect.value;
-
-            // 3. Apply Sorting
-            switch (sortMethod) {
-                case 'price-asc':
-                    filteredProducts.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
-                    break;
-                case 'price-desc':
-                    filteredProducts.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
-                    break;
-                case 'name-asc':
-                    filteredProducts.sort((a, b) => (a.title || a.product_category_name || "").localeCompare(b.title || b.product_category_name || ""));
-                    break;
-                case 'name-desc':
-                    filteredProducts.sort((a, b) => (b.title || b.product_category_name || "").localeCompare(a.title || a.product_category_name || ""));
-                    break;
-                case 'default':
-                default:
-                    // No sorting, use the order from the API
-                    break;
-            }
-
-            // 4. Render the final list
-            renderProducts(filteredProducts);
-        }
-
-        // --- Load Product Grid (Initial Fetch) ---
-        async function loadProducts() {
-            container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">
-                                            <svg class="animate-spin h-5 w-5 mr-3 inline text-indigo-600" viewBox="0 0 24 24"></svg>
-                                            Loading Products...
-                                          </div>`;
-
-            try {
-                const res = await fetch(`${API_URL}api/products`);
-                
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}. Check your API deployment.`);
-                }
-                const data = await res.json();
-                
-                if (!data || data.length === 0) {
-                    allProducts = []; // Set global product list to empty
-                    renderProducts(allProducts); // Render the empty message
-                    return;
-                }
-                
-                // Store the raw product data globally
-                allProducts = data || [];
-                
-                // Apply any initial sort/filter (default)
-                applyFiltersAndSort(); 
-
-            } catch (err) {
-                console.error(err);
-                displayError(err.message || "Network error. See console for details.");
-            }
-        }
-
-        loadProducts();
-    </script>
+      loadProducts();
+    })();
+  </script>
 </body>
 </html>
