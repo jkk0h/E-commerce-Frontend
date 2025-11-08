@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Database Command Interface</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ADD: Sidebar animation + hide button -->
+  <style>
+    #sidebar {
+      transition: transform 0.3s ease-in-out;
+      transform: translateX(-100%);
+    }
+    #sidebar.active {
+      transform: translateX(0);
+    }
+    #menuBtn {
+      transition: opacity 0.3s ease;
+    }
+    #sidebar.active ~ #menuBtn,
+    #sidebar.active + #menuBtn {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
   <link rel="stylesheet" href="styles.css">
   <script src="./script/config.js"></script>
 </head>
@@ -15,9 +33,9 @@
       <button id="closeSidebar" class="text-white text-2xl font-bold">&times;</button>
     </div>
     <nav class="flex-grow p-4 space-y-2">
-      <a href="index.html#customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
-      <a href="admin.html" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">⚙️ Admin View</a>
-      <a href="commands.html" class="block px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition">💻 Commands</a>
+      <a href="index.html#customer" id="nav-customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
+<a href="admin.html"          id="nav-admin"    class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">⚙️ Admin View</a>
+<a href="commands.html"       id="nav-commands" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
     </nav>
   </aside>
 
@@ -82,6 +100,15 @@
     const sidebar = document.getElementById("sidebar");
     document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
     document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
+    // AUTO-HIGHLIGHT CURRENT PAGE
+    document.addEventListener("DOMContentLoaded", () => {
+      const page = location.pathname.split("/").pop() || "index.html";
+      document.querySelectorAll("#sidebar nav a").forEach(a => a.classList.remove("bg-indigo-600"));
+      if (page === "index.html")     document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
+      if (page === "admin.html")     document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
+      if (page === "commands.html")  document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
+    });
+  
 
     function showMessage(title, message) {
       document.getElementById('modal-title').textContent = title;

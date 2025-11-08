@@ -17,6 +17,11 @@
       transform: translateX(-100%);
     }
     #sidebar.active { transform: translateX(0); }
+    #sidebar.active ~ #menuBtn,
+    #sidebar.active + #menuBtn {
+      opacity: 0;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body class="p-6 bg-gray-50">
@@ -28,9 +33,9 @@
       <button id="closeSidebar" class="text-white text-2xl font-bold">×</button>
     </div>
     <nav class="flex-grow p-4 space-y-2">
-      <a href="index.html#customer" id="nav-customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">Customer View</a>
-      <a href="admin.html"          id="nav-admin"    class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">Admin View</a>
-      <a href="commands.html"       id="nav-commands" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">Commands</a>
+      <a href="index.html#customer" id="nav-customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
+      <a href="admin.html"          id="nav-admin"    class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">⚙️ Admin View</a>
+      <a href="commands.html"       id="nav-commands" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
     </nav>
   </aside>
 
