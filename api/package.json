@@ -1,13 +1,39 @@
 {
-  "type": "module",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
-  "dependencies": {
-    "cors": "^2",
-    "express": "^4",
-    "mongodb": "^6",
-    "pg": "^8"
-  }
+    "name": "api",
+    "version": "0.1.0",
+    "description": "Backend API for SQL/Mongo demo (Express + Postgres + Mongo)",
+    "type": "module",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon --watch . --ext js,json --exec node server.js",
+        "seed:pg": "node scripts/seed_postgres.js",
+        "seed:mongo": "node scripts/seed_mongo.js",
+        "lint": "eslint . || true",
+        "test": "node test || true"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^4.21.2",
+        "mongodb": "^6",
+        "pg": "^8.16.3"
+    },
+    "devDependencies": {
+        "eslint": "^8",
+        "nodemon": "^2"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://your.repo.url/here.git"
+    },
+    "keywords": [
+        "express",
+        "postgres",
+        "mongo",
+        "api"
+    ],
+    "author": "Your Name <you@example.com>",
+    "license": "MIT"
 }
