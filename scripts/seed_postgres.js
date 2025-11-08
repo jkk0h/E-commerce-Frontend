@@ -14,7 +14,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
-const dataDir = path.resolve(projectRoot, "data");
+const dataDir = path.resolve(__dirname, "data");
 const schemaPath = path.resolve(projectRoot, "schema.sql");
 
 const POSTGRES_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL;
