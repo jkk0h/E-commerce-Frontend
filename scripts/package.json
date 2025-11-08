@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "seed": "node scripts/seed_postgres.js"
+    "seed": "node scripts/seed_postgres.js",
     "start": "node scripts/seed_postgres.js"
   },
   "dependencies": {
