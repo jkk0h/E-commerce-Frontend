@@ -1,1 +1,18 @@
-{ "type":"module", "scripts":{ "start":"node server.js" }, "dependencies":{ "express":"^4.19.2" } }
+{
+  "type": "module",
+  "scripts": {
+    "seed": "node seed_postgres.js"
+  },
+  "dependencies": {
+    "csv-parse": "^6.1.0",
+    "pg": "^8.16.3",
+    "xlsx": "^0.18.5"
+  },
+  "name": "scripts",
+  "version": "1.0.0",
+  "main": "seed_mongo.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
