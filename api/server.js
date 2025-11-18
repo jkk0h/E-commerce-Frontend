@@ -1,4 +1,4 @@
-﻿// api-server.js  (ESM)
+// api-server.js  (ESM)
 // Works with your existing ERD: no new tables.
 // Uses normalized tables if present; otherwise falls back to staging `orders` table.
 
@@ -265,40 +265,6 @@ app.post("/api/postgres/query", async (req, res) => {
         res.json({ result });
     } catch (e) {
         res.status(400).json({ error: e.message });
-    }
-});
-
-app.post("/api/mongodb/command", async (req, res) => {
-    if (!mongoDb) return res.status(503).json({ error: "MongoDB service is not connected." });
-
-    const { collection, method, args } = req.body;
-    if (!collection || !method) {
-        return res.status(400).json({ error: "Required fields: collection, method" });
-    }
-
-    try {
-        const coll = mongoDb.collection(collection);
-        const methodFn = coll[method];
-
-        if (typeof methodFn !== 'function') {
-            return res.status(400).json({ error: `Method "${method}" not found on collection "${collection}".` });
-        }
-
-        // 💡 Special handling for find(): must be executed and converted to an array
-        if (method === 'find' || method === 'aggregate') {
-            const cursor = methodFn.apply(coll, args);
-            const results = await cursor.toArray();
-            return res.json({ results });
-        }
-        
-        // Handle all other methods (insertOne, updateMany, deleteOne, etc.)
-        const result = await methodFn.apply(coll, args);
-        return res.json({ result });
-
-    } catch (e) {
-        console.error('MongoDB Command Error:', e.message);
-        // Return 400 for user errors (like bad JSON in args), 500 for server issues
-        return res.status(400).json({ error: e.message });
     }
 });
 
