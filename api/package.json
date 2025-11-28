@@ -9,10 +9,9 @@
     "scripts": {
         "start": "node server.js",
         "dev": "nodemon --watch . --ext js,json --exec node server.js",
+        "mongo": "node server-mongo.js",
         "seed:pg": "node scripts/seed_postgres.js",
-        "seed:mongo": "node scripts/seed_mongo.js",
-        "lint": "eslint . || true",
-        "test": "node test || true"
+        "seed:mongo": "node scripts/seed_mongo.js"
     },
     "dependencies": {
         "cors": "^2.8.5",
