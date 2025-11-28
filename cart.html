@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Shopping Cart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./script/config.js"></script>
+    <style>
+        .cart-item-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr 1fr 1fr; /* Image, Details, Price, Qty, Total */
+            gap: 20px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <header class="h-16 flex items-center border-b border-gray-200 bg-white">
+        <div class="max-w-7xl mx-auto px-6 w-full flex items-center justify-between">
+            <a href="index.html" class="text-3xl font-extrabold text-indigo-600">SIT STORE</a>
+            <span class="text-xl font-semibold">Shopping Bag & Checkout</span>
+            <a href="index.html" class="text-sm text-indigo-600 hover:text-indigo-800">Continue Shopping</a>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto p-6 md:p-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
+
+        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-3xl font-bold mb-6 border-b pb-4">Your Bag</h2>
+            
+            <div id="cart-items-container" class="space-y-6">
+                </div>
+            
+            <div id="empty-cart-message" class="hidden text-center py-10 text-gray-500">
+                <p class="text-xl font-semibold mb-2">Your Bag is Empty</p>
+                <a href="index.html" class="text-indigo-600 hover:text-indigo-800 font-medium">Start Shopping Now</a>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 h-fit bg-gray-100 p-6 rounded-lg shadow sticky top-24">
+            <h2 class="text-2xl font-bold mb-6 border-b pb-4">Order Summary</h2>
+            
+            <div class="space-y-3 text-gray-700">
+                <div class="flex justify-between"><span>Subtotal (<span id="item-count">0</span> items)</span><span id="subtotal">$0.00</span></div>
+                <div class="flex justify-between"><span>Shipping Estimate</span><span id="shipping">$5.00</span></div>
+                <div class="flex justify-between"><span>Taxes (Estimated)</span><span id="taxes">$0.00</span></div>
+            </div>
+            
+            <div class="flex justify-between font-extrabold text-xl mt-6 pt-4 border-t border-gray-300">
+                <span>Total</span>
+                <span id="total">$5.00</span>
+            </div>
+            
+            <button onclick="handleCheckout()" class="w-full mt-6 bg-indigo-600 text-white py-3 rounded-full font-bold text-lg hover:bg-indigo-700 transition-colors shadow-md">
+                Proceed to Checkout
+            </button>
+            <p class="text-xs text-center text-gray-500 mt-3">Final costs calculated at checkout.</p>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // CART UTILITY FUNCTIONS (Must match the utility functions in product-detail.html)
+        // =========================================================
+        function getCart() {
+            try {
+                return JSON.parse(localStorage.getItem('cartItems')) || [];
+            } catch (e) {
+                console.error("Failed to parse cart data from localStorage:", e);
+                return [];
+            }
+        }
+        function saveCart(cart) {
+            localStorage.setItem('cartItems', JSON.stringify(cart));
+        }
+
+        // =========================================================
+        // CART RENDERING AND LOGIC
+        // =========================================================
+        
+        const container = document.getElementById('cart-items-container');
+        const emptyMessage = document.getElementById('empty-cart-message');
+        
+        const subtotalEl = document.getElementById('subtotal');
+        const totalEl = document.getElementById('total');
+        const itemCountEl = document.getElementById('item-count');
+        const taxesEl = document.getElementById('taxes');
+        const shippingEl = document.getElementById('shipping');
+        const SHIPPING_FEE = 5.00;
+        const TAX_RATE = 0.05; // 5% tax
+
+        function updateCartItem(id, quantity) {
+            let cart = getCart();
+            const item = cart.find(i => i.id === id);
+
+            if (!item) return;
+
+            if (quantity <= 0) {
+                // Remove item if quantity is zero or less
+                cart = cart.filter(i => i.id !== id);
+            } else {
+                item.quantity = quantity;
+            }
+
+            saveCart(cart);
+            renderCart(); // Re-render the cart UI
+        }
+
+        function calculateTotals(cart) {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            
+            // Apply shipping and tax only if there are items
+            let shipping = 0;
+            let taxes = 0;
+            let total = 0;
+
+            if (totalItems > 0) {
+                shipping = SHIPPING_FEE;
+                taxes = subtotal * TAX_RATE;
+                total = subtotal + shipping + taxes;
+            }
+
+            // Update the summary panel
+            subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+            shippingEl.textContent = totalItems > 0 ? `$${shipping.toFixed(2)}` : '$0.00';
+            taxesEl.textContent = `$${taxes.toFixed(2)}`;
+            totalEl.textContent = `$${total.toFixed(2)}`;
+            itemCountEl.textContent = totalItems;
+        }
+
+        function renderCart() {
+            const cart = getCart();
+            container.innerHTML = ''; // Clear previous items
+
+            if (cart.length === 0) {
+                container.classList.add('hidden');
+                emptyMessage.classList.remove('hidden');
+            } else {
+                container.classList.remove('hidden');
+                emptyMessage.classList.add('hidden');
+
+                cart.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'cart-item-grid pb-4 border-b border-gray-100';
+                    
+                    itemDiv.innerHTML = `
+                        <div class="h-20 w-20 bg-gray-100 flex items-center justify-center rounded-lg text-xs text-gray-400">
+                            [Img]
+                        </div>
+                        
+                        <div>
+                            <p class="font-semibold">${item.name}</p>
+                            <p class="text-sm text-gray-500">Product ID: ${item.id}</p>
+                        </div>
+                        
+                        <span class="font-medium text-green-600">$${item.price.toFixed(2)}</span>
+                        
+                        <select onchange="updateCartItem('${item.id}', parseInt(this.value))" 
+                                class="border p-1 rounded text-sm w-full max-w-[80px]">
+                            ${Array.from({ length: 10 }, (_, i) => i + 1).map(q => 
+                                `<option value="${q}" ${q === item.quantity ? 'selected' : ''}>${q}</option>`
+                            ).join('')}
+                            <option value="0">Remove</option>
+                        </select>
+                        
+                        <span class="font-bold">$${itemTotal.toFixed(2)}</span>
+                    `;
+                    container.appendChild(itemDiv);
+                });
+            }
+
+            calculateTotals(cart);
+        }
+
+        function handleCheckout() {
+            const cart = getCart();
+            if (cart.length === 0) {
+                alert("Your cart is empty. Please add items before checking out.");
+                return;
+            }
+            // Go to the dedicated checkout page, which will read the cart from localStorage
+            window.location.href = "checkout.html";
+        }
+
+        // Initialize the cart view on page load
+        document.addEventListener('DOMContentLoaded', renderCart);
+    </script>
+</body>
+</html>

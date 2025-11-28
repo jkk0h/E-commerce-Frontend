@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin | Next-Gen Store</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="./script/config.js"></script>
+</head>
+<body class="bg-gray-50 p-8 text-gray-800">
+  <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
+    <!-- Title + close button -->
+    <div class="p-6 border-b border-indigo-500 flex justify-between items-center">
+      <h1 class="text-xl font-bold">Next-Gen Store</h1>
+      <button id="closeSidebar" class="text-white text-2xl font-bold">&times;</button>
+    </div>
+
+    <!-- existing nav links for this page go here -->
+    <nav class="flex-grow p-4 space-y-2">
+      <!-- keep your existing <a> links unchanged -->
+      <a href="index.html#customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
+      <a href="admin.html" class="block px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition">⚙️ Admin View</a>
+      <a href="commands.html" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
+    </nav>
+  </aside>
+
+  <button id="menuBtn" class="fixed top-5 left-5 bg-indigo-600 text-white p-2 rounded-md shadow-md z-50">☰</button>
+
+  <main class="max-w-5xl mx-auto mt-16">
+    <h1 class="text-4xl font-bold text-indigo-700 mb-6 text-center">⚙️ Admin View</h1>
+
+    <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+      <h3 class="text-xl font-semibold mb-3 text-gray-700">
+        Admin: Record Product Units into History
+        <p id="adminPerfInfo" class="mt-2 text-xs text-gray-600 italic">
+          <!-- timing info will appear here -->
+        </p>
+      </h3>
+      <form id="addProductForm" class="space-y-3">
+        <!-- This is just a friendly label; product_id in the DB -->
+        <input
+          type="text"
+          id="newTitle"
+          placeholder="Display Name (for UI only)"
+          class="w-full border p-2 rounded"
+          required
+        >
+        <input
+          type="number"
+          step="0.01"
+          id="newPrice"
+          placeholder="Unit Price for This Admin Order"
+          class="w-full border p-2 rounded"
+          required
+        >
+        <input
+          type="text"
+          id="newSKU"
+          placeholder="Product ID / SKU (maps to product_id)"
+          class="w-full border p-2 rounded"
+          required
+        >
+        <input
+          type="number"
+          min="1"
+          step="1"
+          id="newStock"
+          placeholder="Units to Record into Transaction History"
+          class="w-full border p-2 rounded"
+          required
+        >
+        <button
+          type="submit"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg"
+        >
+          Record Admin Units
+        </button>
+      </form>
+
+      <p class="text-xs text-gray-500 mt-2">
+        This form creates a synthetic <strong>admin order</strong> in the existing
+        tables (<code>orders_header</code>, <code>orders_timestamps</code>,
+        <code>order_items_core</code>, <code>order_item_pricing</code>, etc.).
+        It does <strong>not</strong> maintain a separate stock table – it simply
+        adds more transaction history rows for the selected <code>product_id</code>.
+      </p>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-lg">
+      <h3 class="text-xl font-semibold mb-3 text-gray-700">
+        Products Derived from Transaction History
+      </h3>
+      <table class="w-full text-sm text-left border border-gray-200 rounded-lg">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="py-2 px-4 border-b">Product ID / SKU</th>
+            <th class="py-2 px-4 border-b">Name (UI)</th>
+            <th class="py-2 px-4 border-b">Avg Price from Orders</th>
+            <th class="py-2 px-4 border-b">Units (order_count / stock)</th>
+            <th class="py-2 px-4 border-b">Action</th>
+          </tr>
+        </thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    // Sidebar toggle
+    const sidebar = document.getElementById("sidebar");
+    document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
+    document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
+
+    function coalesceName(p) {
+      return p.title || p.product_category_name || p.name || "";
+    }
+
+    // Prefer product_id first, then fallback
+    function coalesceId(p) {
+      return p.product_id || p.sku || p.id || "";
+    }
+
+    function coalescePrice(p) {
+      return p.price ?? p.value ?? p.price_value ?? "";
+    }
+
+    function coalesceStock(p) {
+      return p.stock ?? p.quantity ?? p.qty ?? p.stock_quantity ?? p.order_count ?? "";
+    }
+
+    async function loadAdminTable() {
+      const tbody = document.getElementById("adminTableBody");
+      tbody.innerHTML = "<tr><td colspan='5' class='text-center p-4 text-gray-400'>Loading...</td></tr>";
+
+      try {
+        const res = await fetch(sqlApi("/api/products"));
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+
+        if (!list.length) {
+          tbody.innerHTML = "<tr><td colspan='5' class='text-center p-4 text-gray-400'>No products found.</td></tr>";
+          return;
+        }
+
+        tbody.innerHTML = "";
+        list.forEach(p => {
+          const pid = coalesceId(p);
+          const title = coalesceName(p);
+          const price = coalescePrice(p);
+          const stock = coalesceStock(p);
+
+          const row = document.createElement("tr");
+          row.className = "hover:bg-gray-50";
+          row.innerHTML = `
+            <td class="p-2 border-b">${pid}</td>
+            <td class="p-2 border-b">${title}</td>
+            <td class="p-2 border-b">${price !== "" ? '$' + Number(price).toFixed(2) : '-'}</td>
+            <td class="p-2 border-b">${stock !== "" ? stock : '-'}</td>
+            <td class="p-2 border-b">
+              <button class="text-gray-400 cursor-not-allowed" title="Delete not enabled on API">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (e) {
+        console.error("Failed to load inventory", e);
+        tbody.innerHTML = "<tr><td colspan='5' class='text-center p-4 text-red-500'>Failed to load inventory.</td></tr>";
+      }
+    }
+
+    const newTitle = document.getElementById("newTitle");
+    const newPrice = document.getElementById("newPrice");
+    const newSKU   = document.getElementById("newSKU");
+    const newStock = document.getElementById("newStock");
+
+    document.getElementById("addProductForm").onsubmit = async (e) => {
+      e.preventDefault();
+
+      const title = newTitle.value.trim();
+      const product_id = newSKU.value.trim(); // map input → product_id
+      const price = Number(newPrice.value);
+      const quantity = Number(newStock.value);
+
+      if (!title || !product_id || isNaN(price)) {
+        alert("Please enter a valid title, price, and Product ID / SKU.");
+        return;
+      }
+
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        alert("Please enter a valid positive quantity.");
+        return;
+      }
+
+      const payload = { title, price, product_id, quantity };
+      const perfEl = document.getElementById("adminPerfInfo");
+
+      // Separate timers for SQL and Mongo (same overall window, but still useful)
+      const tSqlStart = performance.now();
+      const tMongoStart = performance.now();
+      let sqlRes, sqlJson, sqlRoundTripMs;
+      let mongoRes, mongoJson, mongoRoundTripMs;
+
+      try {
+        // Fire both in parallel
+        const [sqlResponse, mongoResponse] = await Promise.all([
+          fetch(sqlApi("/api/products"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }),
+          fetch(mongoApi("/api/products"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }),
+        ]);
+
+        const tSqlEnd = performance.now();
+        const tMongoEnd = performance.now();
+        sqlRoundTripMs = tSqlEnd - tSqlStart;
+        mongoRoundTripMs = tMongoEnd - tMongoStart;
+
+        sqlRes = sqlResponse;
+        mongoRes = mongoResponse;
+
+        sqlJson = await sqlRes.json().catch(() => ({}));
+        mongoJson = await mongoRes.json().catch(() => ({}));
+
+        // Basic success/failure info
+        if (!sqlRes.ok) {
+          console.warn("SQL insert failed:", sqlJson);
+        }
+        if (!mongoRes.ok) {
+          console.warn("Mongo insert failed:", mongoJson);
+        }
+
+        // Friendly alert summarising what happened
+        if (sqlRes.ok && mongoRes.ok) {
+          const pid = (sqlJson?.product?.id || mongoJson?.product?.id || product_id);
+          alert(`Seeded ${quantity} units for product ${pid} into BOTH SQL and Mongo.`);
+        } else if (sqlRes.ok && !mongoRes.ok) {
+          alert(`SQL insert OK but Mongo failed: ${mongoJson?.error || mongoRes.status}`);
+        } else if (!sqlRes.ok && mongoRes.ok) {
+          alert(`Mongo insert OK but SQL failed: ${sqlJson?.error || sqlRes.status}`);
+        } else {
+          alert("Both SQL and Mongo inserts failed. Check console/network tab.");
+        }
+
+        // Extract timing numbers
+        const sqlMs = typeof sqlJson?.sqlDbMs === "number"
+          ? sqlJson.sqlDbMs.toFixed(2)
+          : "n/a";
+        const sqlBackendMs = typeof sqlJson?.backendTotalMs === "number"
+          ? sqlJson.backendTotalMs.toFixed(2)
+          : "n/a";
+
+        const mongoDbMs = typeof mongoJson?.mongoDbMs === "number"
+          ? mongoJson.mongoDbMs.toFixed(2)
+          : (typeof mongoJson?.dbMs === "number" ? mongoJson.dbMs.toFixed(2) : "n/a");
+
+        const sqlRt = sqlRoundTripMs != null ? sqlRoundTripMs.toFixed(2) : "n/a";
+        const mongoRt = mongoRoundTripMs != null ? mongoRoundTripMs.toFixed(2) : "n/a";
+
+        if (perfEl) {
+          perfEl.textContent =
+            `SQL → DB: ${sqlMs} ms | SQL backend total: ${sqlBackendMs} ms | ` +
+            `SQL end-to-end: ${sqlRt} ms || ` +
+            `Mongo → DB: ${mongoDbMs} ms | Mongo end-to-end: ${mongoRt} ms`;
+        }
+
+        // Reset + refresh table (still SQL-derived)
+        e.target.reset();
+        loadAdminTable();
+      } catch (err) {
+        console.error("Network error while inserting product.", err);
+        alert("Network error while inserting product.");
+        if (perfEl) perfEl.textContent = "Error: Network error while inserting product.";
+      }
+    };
+
+    loadAdminTable();
+  </script>
+</body>
+</html>
