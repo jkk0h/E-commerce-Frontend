@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Shopping Cart</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./script/config.js"></script>
     <style>
         .cart-item-grid {
             display: grid;
@@ -153,7 +154,7 @@
                         
                         <div>
                             <p class="font-semibold">${item.name}</p>
-                            <p class="text-sm text-gray-500">SKU: ${item.id}</p>
+                            <p class="text-sm text-gray-500">Product ID: ${item.id}</p>
                         </div>
                         
                         <span class="font-medium text-green-600">$${item.price.toFixed(2)}</span>
@@ -181,13 +182,8 @@
                 alert("Your cart is empty. Please add items before checking out.");
                 return;
             }
-            alert(`
-                Initiating Checkout for Total: ${totalEl.textContent}
-                (This is a placeholder for real payment processing.)
-            `);
-            // Optional: Clear cart after successful checkout simulation
-            // localStorage.removeItem('cartItems');
-            // renderCart(); 
+            // Go to the dedicated checkout page, which will read the cart from localStorage
+            window.location.href = "checkout.html";
         }
 
         // Initialize the cart view on page load

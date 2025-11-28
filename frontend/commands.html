@@ -28,16 +28,22 @@
 </head>
 <body class="p-6">
   <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
+    <!-- Title + close button -->
     <div class="p-6 border-b border-indigo-500 flex justify-between items-center">
       <h1 class="text-xl font-bold">Next-Gen Store</h1>
       <button id="closeSidebar" class="text-white text-2xl font-bold">&times;</button>
     </div>
+
+
+    <!-- existing nav links for this page go here -->
     <nav class="flex-grow p-4 space-y-2">
+      <!-- keep your existing <a> links unchanged -->
       <a href="index.html#customer" id="nav-customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
-<a href="admin.html"          id="nav-admin"    class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">⚙️ Admin View</a>
-<a href="commands.html"       id="nav-commands" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
+      <a href="admin.html"          id="nav-admin"    class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">⚙️ Admin View</a>
+      <a href="commands.html"       id="nav-commands" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
     </nav>
   </aside>
+
 
   <button id="menuBtn" class="fixed top-5 left-5 bg-indigo-600 text-white p-2 rounded-md shadow-md z-50">☰</button>
 
@@ -54,8 +60,9 @@
       <div id="sql-results-container" class="mt-6">
         <h3 class="text-xl font-semibold text-blue-900 mb-2">Results</h3>
         <div id="sql-results" class="results-box overflow-x-auto"></div>
+        <p id="sql-perf" class="mt-2 text-xs text-gray-500"></p>
       </div>
-    </div>
+
 
     <!-- NoSQL -->
     <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-6 rounded-lg mb-8 shadow-inner">
@@ -66,8 +73,10 @@
       </form>
       <div id="nosql-results-container" class="mt-6">
         <h3 class="text-xl font-semibold text-green-900 mb-2">Results</h3>
-        <pre id="nosql-results"></pre>
+        <pre id="nosql-results" class="results-box"></pre>
+        <p id="nosql-perf" class="mt-2 text-xs text-gray-500"></p>
       </div>
+
     </div>
   </div>
 
@@ -86,141 +95,211 @@
     </div>
   </div>
 
-  <script>
-    const API_ROOT = window.getApiUrl ? window.getApiUrl("") : (window.API_URL || "");
-    function api(path) { return (API_ROOT && !API_ROOT.endsWith("/") ? API_ROOT + "/" : API_ROOT) + (path.startsWith("/") ? path.slice(1) : path); }
+    <script>
+      // Use sqlApi for Postgres, mongoApi for MongoDB
+      const mysqlForm = document.getElementById("sql-form");
+      const mysqlQueryInput = document.getElementById("sql-query");
+      const mysqlResults = document.getElementById("sql-results");
+      const mysqlPerf = document.getElementById("sql-perf");
 
-    const mysqlForm = document.getElementById('sql-form');
-    const mysqlQueryInput = document.getElementById('sql-query');
-    const mysqlResults = document.getElementById('sql-results');
-    const nosqlForm = document.getElementById('nosql-form');
-    const nosqlCommandInput = document.getElementById('nosql-command');
-    const nosqlResults = document.getElementById('nosql-results');
+      const nosqlForm = document.getElementById("nosql-form");
+      const nosqlCommandInput = document.getElementById("nosql-command");
+      const nosqlResults = document.getElementById("nosql-results");
+      const nosqlPerf = document.getElementById("nosql-perf");
 
-    const sidebar = document.getElementById("sidebar");
-    document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
-    document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
-    // AUTO-HIGHLIGHT CURRENT PAGE
-    document.addEventListener("DOMContentLoaded", () => {
-      const page = location.pathname.split("/").pop() || "index.html";
-      document.querySelectorAll("#sidebar nav a").forEach(a => a.classList.remove("bg-indigo-600"));
-      if (page === "index.html")     document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
-      if (page === "admin.html")     document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
-      if (page === "commands.html")  document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
-    });
-  
+      const sidebar = document.getElementById("sidebar");
+      document.getElementById("menuBtn").onclick = () =>
+        sidebar.classList.add("active");
+      document.getElementById("closeSidebar").onclick = () =>
+        sidebar.classList.remove("active");
 
-    function showMessage(title, message) {
-      document.getElementById('modal-title').textContent = title;
-      document.getElementById('modal-message').textContent = message;
-      document.getElementById('message-modal').classList.remove('hidden');
-    }
-    document.getElementById('close-modal-btn').addEventListener('click', e => {
-      e.preventDefault();
-      document.getElementById('message-modal').classList.add('hidden');
-    });
-
-    function jsonToHtmlTable(data) {
-      if (!data || data.length === 0) return '<p class="text-gray-500">No results found.</p>';
-      const headers = Object.keys(data[0]);
-      let html = '<table class="min-w-full divide-y divide-gray-300 border border-gray-300">';
-      html += '<thead class="bg-gray-100"><tr>';
-      headers.forEach(h => html += `<th class="px-4 py-3 text-left text-xs font-medium text-gray-600">${h}</th>`);
-      html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
-      data.forEach(row => {
-        html += '<tr>';
-        headers.forEach(h => {
-          let v = row[h];
-          if (typeof v === 'number' && v % 1 !== 0) v = v.toFixed(4);
-          html += `<td class="px-4 py-3 text-sm text-gray-900">${v ?? ''}</td>`;
-        });
-        html += '</tr>';
+      // AUTO-HIGHLIGHT CURRENT PAGE
+      document.addEventListener("DOMContentLoaded", () => {
+        const page = location.pathname.split("/").pop() || "index.html";
+        document
+          .querySelectorAll("#sidebar nav a")
+          .forEach((a) => a.classList.remove("bg-indigo-600"));
+        if (page === "index.html")
+          document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
+        if (page === "admin.html")
+          document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
+        if (page === "commands.html")
+          document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
       });
-      html += '</tbody></table>';
-      return html;
-    }
 
-    // --- SQL: use /api/postgres/query and read result.rows ---
-    mysqlForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const q = mysqlQueryInput.value.trim();
-      if (!q) return showMessage("Error", "Please enter a SQL query.");
-      mysqlResults.innerHTML = '<div class="text-gray-500">Executing query...</div>';
-      try {
-        const r = await fetch(api("/api/postgres/query"), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q })
-        });
-        const result = await r.json();
-        if (r.ok && result && result.result) {
-          const rows = result.result.rows || [];
-          mysqlResults.innerHTML = jsonToHtmlTable(rows);
-          showMessage("Success", `Query executed. ${rows.length} row(s).`);
-        } else {
-          mysqlResults.innerHTML = `<pre class="text-red-600">${result.error || 'Unknown error'}</pre>`;
-          showMessage("Error", result.error || "Failed to execute SQL query.");
-        }
-      } catch (err) {
-        mysqlResults.innerHTML = '<pre class="text-red-600">Network error</pre>';
-        showMessage("Error", "Network error. Could not connect to API.");
+      function showMessage(title, message) {
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-message").textContent = message;
+        document.getElementById("message-modal").classList.remove("hidden");
       }
-    });
 
-    // --- NoSQL: parse "products.find({})" into { collection, method, args } ---
-    function parseMongoCommand(cmd) {
-      const parts = cmd.split('.');
-      if (parts.length < 2) throw new Error("Use format: collection.method(args)");
-      const collection = parts[0].trim();
-      const rest = parts.slice(1).join('.');
-      const m = rest.match(/(\w+)\((.*)\)$/s);
-      if (!m) throw new Error("Could not parse method(args)");
-      const method = m[1];
-      const argsBody = m[2].trim();
-      let args = [];
-      if (argsBody.length) {
+      document
+        .getElementById("close-modal-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          document.getElementById("message-modal").classList.add("hidden");
+        });
+
+      function jsonToHtmlTable(data) {
+        if (!data || data.length === 0)
+          return '<p class="text-gray-500">No results found.</p>';
+        const headers = Object.keys(data[0] ?? {});
+        if (!headers.length)
+          return '<p class="text-gray-500">No columns to display.</p>';
+
+        let html =
+          '<table class="min-w-full divide-y divide-gray-300 border border-gray-300">';
+        html += '<thead class="bg-gray-100"><tr>';
+        headers.forEach(
+          (h) =>
+            (html += `<th class="px-4 py-3 text-left text-xs font-medium text-gray-600">${h}</th>`)
+        );
+        html += "</tr></thead><tbody class=\"bg-white divide-y divide-gray-200\">";
+        data.forEach((row) => {
+          html += "<tr>";
+          headers.forEach((h) => {
+            let v = row[h];
+            if (typeof v === "number" && v % 1 !== 0) v = v.toFixed(4);
+            html += `<td class="px-4 py-3 text-sm text-gray-900">${
+              v ?? ""
+            }</td>`;
+          });
+          html += "</tr>";
+        });
+        html += "</tbody></table>";
+        return html;
+      }
+
+      // --- SQL: via Postgres API ---
+      mysqlForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const q = mysqlQueryInput.value.trim();
+        if (!q) return showMessage("Error", "Please enter a SQL query.");
+
+        mysqlResults.innerHTML =
+          '<div class="text-gray-500">Executing query...</div>';
+        if (mysqlPerf) mysqlPerf.textContent = "";
+
+        const tStart = performance.now();
         try {
-          const jsonString = argsBody.startsWith('[') ? argsBody : `[${argsBody}]`;
-          args = JSON.parse(jsonString);
-        } catch {
-          args = [argsBody];
-        }
-      }
-      return { collection, method, args };
-    }
+          const r = await fetch(sqlApi("/api/postgres/query"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: q }),
+          });
+          const tEnd = performance.now();
+          const roundTripMs = tEnd - tStart;
 
-    nosqlForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const cmd = nosqlCommandInput.value.trim();
-      if (!cmd) return showMessage("Error", "Please enter a NoSQL command.");
-      nosqlResults.textContent = 'Executing command...';
-      let payload;
-      try {
-        payload = parseMongoCommand(cmd);
-      } catch (err) {
-        nosqlResults.textContent = `Error: ${err.message}`;
-        return;
-      }
-      try {
-        const r = await fetch(api("/api/mongodb/command"), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const result = await r.json();
-        if (r.ok) {
-          const out = result.result ?? result.results ?? result;
-          nosqlResults.textContent = JSON.stringify(out, null, 2);
-          showMessage("Success", "Command executed successfully.");
-        } else {
-          nosqlResults.textContent = `Error: ${result.error || 'Unknown error'}`;
-          showMessage("Error", result.error || "Failed to execute NoSQL command.");
+          const result = await r.json().catch(() => ({}));
+
+          const dbMs =
+            typeof result.dbMs === "number" ? result.dbMs.toFixed(2) : "N/A";
+
+          if (r.ok && result && result.result) {
+            const rows = result.result.rows || [];
+            mysqlResults.innerHTML = jsonToHtmlTable(rows);
+            showMessage("Success", `Query executed. ${rows.length} row(s).`);
+          } else {
+            mysqlResults.innerHTML = `<pre class="text-red-600">${
+              result.error || "Unknown error"
+            }</pre>`;
+            showMessage("Error", result.error || "Failed to execute SQL query.");
+          }
+
+          if (mysqlPerf) {
+            mysqlPerf.textContent = `SQL → DB: ${dbMs} ms | End-to-end (fetch + render): ${roundTripMs.toFixed(
+              2
+            )} ms`;
+          }
+        } catch (err) {
+          mysqlResults.innerHTML =
+            '<pre class="text-red-600">Network error</pre>';
+          showMessage("Error", "Network error. Could not connect to API.");
+          if (mysqlPerf) mysqlPerf.textContent = "";
         }
-      } catch {
-        nosqlResults.textContent = 'Error: Network error';
-        showMessage("Error", "Network error. Could not connect to API.");
+      });
+
+      // --- parse "products.find({})" into { collection, method, args } ---
+      function parseMongoCommand(cmd) {
+        const parts = cmd.split(".");
+        if (parts.length < 2)
+          throw new Error("Use format: collection.method(args)");
+        const collection = parts[0].trim();
+        const rest = parts.slice(1).join(".");
+        const m = rest.match(/(\w+)\((.*)\)$/s);
+        if (!m) throw new Error("Could not parse method(args)");
+        const method = m[1];
+        const argsBody = m[2].trim();
+        let args = [];
+        if (argsBody.length) {
+          try {
+            const jsonString = argsBody.startsWith("[")
+              ? argsBody
+              : `[${argsBody}]`;
+            args = JSON.parse(jsonString);
+          } catch {
+            // fallback: treat as a single argument string
+            args = [argsBody];
+          }
+        }
+        return { collection, method, args };
       }
-    });
-  </script>
+
+      // --- NoSQL via Mongo API ---
+      nosqlForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const cmd = nosqlCommandInput.value.trim();
+        if (!cmd) return showMessage("Error", "Please enter a NoSQL command.");
+
+        nosqlResults.textContent = "Executing command...";
+        if (nosqlPerf) nosqlPerf.textContent = "";
+
+        let payload;
+        try {
+          payload = parseMongoCommand(cmd);
+        } catch (err) {
+          nosqlResults.textContent = `Error: ${err.message}`;
+          return;
+        }
+
+        const tStart = performance.now();
+        try {
+          const r = await fetch(mongoApi("/api/mongodb/command"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const tEnd = performance.now();
+          const roundTripMs = tEnd - tStart;
+
+          const result = await r.json().catch(() => ({}));
+          const dbMs =
+            typeof result.dbMs === "number" ? result.dbMs.toFixed(2) : "N/A";
+
+          if (r.ok) {
+            const out = result.result ?? result.results ?? result;
+            nosqlResults.textContent = JSON.stringify(out, null, 2);
+            showMessage("Success", "Command executed successfully.");
+          } else {
+            nosqlResults.textContent = `Error: ${
+              result.error || "Unknown error"
+            }`;
+            showMessage("Error", result.error || "Failed to execute NoSQL command.");
+          }
+
+          if (nosqlPerf) {
+            nosqlPerf.textContent = `Mongo → DB: ${dbMs} ms | End-to-end (fetch + render): ${roundTripMs.toFixed(
+              2
+            )} ms`;
+          }
+        } catch (err) {
+          nosqlResults.textContent = "Error: Network error";
+          showMessage("Error", "Network error. Could not connect to API.");
+          if (nosqlPerf) nosqlPerf.textContent = "";
+        }
+      });
+    </script>
+
+
 </body>
 </html>

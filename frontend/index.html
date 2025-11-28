@@ -28,16 +28,22 @@
 
   <!-- SAME SIDEBAR AS COMMANDS.HTML -->
   <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
+  <!-- Title + close button -->
     <div class="p-6 border-b border-indigo-500 flex justify-between items-center">
       <h1 class="text-xl font-bold">Next-Gen Store</h1>
-      <button id="closeSidebar" class="text-white text-2xl font-bold">×</button>
+      <button id="closeSidebar" class="text-white text-2xl font-bold">&times;</button>
     </div>
+
+
+    <!-- existing nav links for this page go here -->
     <nav class="flex-grow p-4 space-y-2">
+      <!-- keep your existing <a> links unchanged -->
       <a href="index.html#customer" id="nav-customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
       <a href="admin.html"          id="nav-admin"    class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">⚙️ Admin View</a>
       <a href="commands.html"       id="nav-commands" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
     </nav>
   </aside>
+
 
   <button id="menuBtn" class="fixed top-5 left-5 bg-indigo-600 text-white p-2 rounded-md shadow-md z-50">☰</button>
 
@@ -47,7 +53,7 @@
 
     <!-- Search & Sort -->
     <div class="flex flex-col md:flex-row gap-4 mb-8">
-      <input id="searchInput" type="search" placeholder="Search products or SKU..." 
+      <input id="searchInput" type="search" placeholder="Search products or Product ID / SKU..."
              class="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500">
       <select id="sortSelect" class="px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <option value="">Sort</option>
@@ -66,83 +72,86 @@
     </div>
   </div>
 
-  <script>
-    // === SHARED: API + SIDEBAR + HIGHLIGHT ===
-    const API_ROOT = window.getApiUrl ? window.getApiUrl("") : (window.API_URL || "");
-    function api(path) { return (API_ROOT && !API_ROOT.endsWith("/") ? API_ROOT + "/" : API_ROOT) + (path.startsWith("/") ? path.slice(1) : path); }
+    <script>
+      // === SHARED: SIDEBAR + HIGHLIGHT (API calls use sqlApi from config.js) ===
 
-    const sidebar = document.getElementById("sidebar");
-    document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
-    document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
+      const sidebar = document.getElementById("sidebar");
+      document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
+      document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
 
-    // AUTO HIGHLIGHT CURRENT PAGE
-    document.addEventListener("DOMContentLoaded", () => {
-      const page = location.pathname.split("/").pop() || "index.html";
-      document.querySelectorAll("#sidebar nav a").forEach(a => a.classList.remove("bg-indigo-600"));
-      if (page === "index.html")     document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
-      if (page === "admin.html")     document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
-      if (page === "commands.html")  document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
-    });
-
-    // === PRODUCT DISPLAY ===
-    const container = document.getElementById("productsContainer");
-    const searchInput = document.getElementById("searchInput");
-    const sortSelect = document.getElementById("sortSelect");
-    const emptyMessage = document.getElementById("emptyMessage");
-    let allProducts = [];
-
-    const getId    = p => p?.sku ?? p?.product_id ?? p?.id ?? "";
-    const getName  = p => p?.title ?? p?.product_category_name ?? p?.name ?? "Unnamed";
-    const getPrice = p => parseFloat(p?.price ?? p?.value ?? 0) || 0;
-    const getImage = p => p?.image_url ?? p?.image ?? "assets/placeholder.png";
-
-    async function loadProducts() {
-      try {
-        const res = await fetch(api("/api/products"));
-        const json = await res.json();
-        allProducts = Array.isArray(json) ? json : json?.results || json?.data || [];
-      } catch (e) { console.error(e); allProducts = []; }
-      applyFiltersAndSort();
-    }
-
-    function applyFiltersAndSort() {
-      let list = allProducts.filter(p => {
-        const q = searchInput.value.trim().toLowerCase();
-        return !q || getName(p).toLowerCase().includes(q) || getId(p).toLowerCase().includes(q);
+      // AUTO HIGHLIGHT CURRENT PAGE
+      document.addEventListener("DOMContentLoaded", () => {
+        const page = location.pathname.split("/").pop() || "index.html";
+        document.querySelectorAll("#sidebar nav a").forEach(a => a.classList.remove("bg-indigo-600"));
+        if (page === "index.html")     document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
+        if (page === "admin.html")     document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
+        if (page === "commands.html")  document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
       });
 
-      switch (sortSelect.value) {
-        case "price-asc":  list.sort((a,b) => getPrice(a) - getPrice(b)); break;
-        case "price-desc": list.sort((a,b) => getPrice(b) - getPrice(a)); break;
-        case "name-asc":   list.sort((a,b) => getName(a).localeCompare(getName(b))); break;
-        case "name-desc":  list.sort((a,b) => getName(b).localeCompare(getName(a))); break;
+      // === PRODUCT DISPLAY ===
+      const container = document.getElementById("productsContainer");
+      const searchInput = document.getElementById("searchInput");
+      const sortSelect = document.getElementById("sortSelect");
+      const emptyMessage = document.getElementById("emptyMessage");
+      let allProducts = [];
+
+      const getId    = p => p?.product_id ?? p?.sku ?? p?.id ?? "";
+      const getName  = p => p?.title ?? p?.product_category_name ?? p?.name ?? "Unnamed";
+      const getPrice = p => parseFloat(p?.price ?? p?.value ?? 0) || 0;
+      const getImage = p => p?.image_url ?? p?.image ?? "assets/placeholder.png";
+
+      async function loadProducts() {
+        try {
+          // 👇 use SQL API explicitly
+          const res = await fetch(sqlApi("/api/products"));
+          const json = await res.json();
+          allProducts = Array.isArray(json) ? json : json?.results || json?.data || [];
+        } catch (e) { console.error(e); allProducts = []; }
+        applyFiltersAndSort();
       }
-      render(list);
-    }
 
-    function render(items) {
-      if (!items.length) { container.innerHTML = ""; emptyMessage.classList.remove("hidden"); return; }
-      emptyMessage.classList.add("hidden");
-      container.innerHTML = items.map(p => `
-        <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition">
-          <img src="${getImage(p)}" alt="${getName(p)}" class="w-full h-48 object-cover" onerror="this.src='assets/placeholder.png'">
-          <div class="p-4">
-            <h3 class="font-bold text-lg text-gray-800">${getName(p)}</h3>
-            <p class="text-sm text-gray-500">SKU: ${getId(p)}</p>
-            <p class="text-2xl font-bold text-indigo-600 mt-2">$${getPrice(p).toFixed(2)}</p>
-            <a href="product-detail.html?id=${getId(p)}" 
-               class="block mt-4 text-center bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">
-              View Details
-            </a>
+      function applyFiltersAndSort() {
+        let list = allProducts.filter(p => {
+          const q = searchInput.value.trim().toLowerCase();
+          return !q || getName(p).toLowerCase().includes(q) || getId(p).toLowerCase().includes(q);
+        });
+
+        switch (sortSelect.value) {
+          case "price-asc":  list.sort((a,b) => getPrice(a) - getPrice(b)); break;
+          case "price-desc": list.sort((a,b) => getPrice(b) - getPrice(a)); break;
+          case "name-asc":   list.sort((a,b) => getName(a).localeCompare(getName(b))); break;
+          case "name-desc":  list.sort((a,b) => getName(b).localeCompare(getName(a))); break;
+        }
+        render(list);
+      }
+
+      function render(items) {
+        if (!items.length) {
+          container.innerHTML = "";
+          emptyMessage.classList.remove("hidden");
+          return;
+        }
+        emptyMessage.classList.add("hidden");
+        container.innerHTML = items.map(p => `
+          <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition">
+            <img src="${getImage(p)}" alt="${getName(p)}" class="w-full h-48 object-cover" onerror="this.src='assets/placeholder.png'">
+            <div class="p-4">
+              <p class="text-sm text-gray-500">Product ID: ${getId(p)}</p>
+              <p class="text-2xl font-bold text-indigo-600 mt-2">$${getPrice(p).toFixed(2)}</p>
+              <a href="product-detail.html?id=${getId(p)}" 
+                class="block mt-4 text-center bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">
+                View Details
+              </a>
+            </div>
           </div>
-        </div>
-      `).join("");
-    }
+        `).join("");
+      }
 
-    const debounce = (fn, wait) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); }; };
-    searchInput.addEventListener("input", debounce(applyFiltersAndSort, 200));
-    sortSelect.addEventListener("change", applyFiltersAndSort);
-    loadProducts();
+      const debounce = (fn, wait) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); }; };
+      searchInput.addEventListener("input", debounce(applyFiltersAndSort, 200));
+      sortSelect.addEventListener("change", applyFiltersAndSort);
+      loadProducts();
   </script>
+
 </body>
 </html>

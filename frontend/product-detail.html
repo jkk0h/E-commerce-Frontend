@@ -24,111 +24,244 @@
     </div>
   </div>
 
-  <script>
-    const API_ROOT = window.getApiUrl ? window.getApiUrl("") : (window.API_URL || "");
-    function api(path) { return (API_ROOT && !API_ROOT.endsWith("/") ? API_ROOT + "/" : API_ROOT) + (path.startsWith("/") ? path.slice(1) : path); }
+  <div id="reviews-section" class="col-span-full mt-8">
+      <h2 class="text-2xl font-bold mb-4">Customer Reviews</h2>
+      <select id="db-toggle" class="mb-4 p-2 border rounded">
+          <option value="sql">SQL (Postgres)</option>
+          <option value="nosql">NoSQL (MongoDB)</option>
+      </select>
+      <div id="reviews-container" class="space-y-4 max-h-96 overflow-y-auto border p-4 rounded-lg"></div>
+      <div id="loading-sentinel" class="text-center py-4 text-gray-500">Loading more reviews...</div>
+  </div>
 
-    const contentArea = document.getElementById("product-content-area");
-    const loadingState = document.getElementById("loading-state");
+    <script>
+      // Use SQL API for product details
+      const contentArea = document.getElementById("product-content-area");
+      const loadingState = document.getElementById("loading-state");
 
-    function getProductIdFromUrl() {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('id');
-    }
+      let productId;  // Hoist productId to global scope for use in loadReviews
 
-    function getCart() {
-      try { return JSON.parse(localStorage.getItem('cartItems')) || []; } catch { return []; }
-    }
-    function saveCart(cart) { localStorage.setItem('cartItems', JSON.stringify(cart)); }
+      function getProductIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
+      }
 
-    function addToCart(id, name, price) {
-      const itemPrice = parseFloat(price) || 0;
-      let cart = getCart();
-      const existingItem = cart.find(item => item.id === id);
-      if (existingItem) existingItem.quantity += 1;
-      else cart.push({ id, name, price: itemPrice, quantity: 1 });
-      saveCart(cart);
-      alert(`Added 1x ${name} to your bag.`);
-    }
+      function getCart() {
+        try { return JSON.parse(localStorage.getItem('cartItems')) || []; } catch { return []; }
+      }
+      function saveCart(cart) { localStorage.setItem('cartItems', JSON.stringify(cart)); }
 
-    function renderProduct(p) {
-      const title = p.title || p.product_category_name || "Untitled Product";
-      const subtitle = p.review_comment ? p.review_comment.substring(0,50)+'...' : "Check out the latest drop.";
-      const priceText = p.price != null ? `$${parseFloat(p.price).toFixed(2)}` : "Price TBD";
-      const description = p.product_description || "Product description placeholder.";
-      const productId = p.sku || p.product_id || p.id || 'UNKNOWN';
-      const productName = title.replace(/'/g, "\\'");
-      const productPrice = p.price != null ? Number(p.price).toFixed(2) : '0';
+      function addToCart(id, name, price) {
+        const itemPrice = parseFloat(price) || 0;
+        let cart = getCart();
+        const existingItem = cart.find(item => item.id === id);
+        if (existingItem) existingItem.quantity += 1;
+        else cart.push({ id, name, price: itemPrice, quantity: 1 });
+        saveCart(cart);
+        alert(`Added 1x ${name} to your bag.`);
+      }
 
-      let specsHTML = `<div class="space-y-1 text-sm text-gray-600 mt-4">`;
-      if (p.product_category_name) specsHTML += `<p><strong>Category:</strong> ${p.product_category_name}</p>`;
-      if (p.freight_value != null) specsHTML += `<p><strong>Shipping Cost:</strong> $${parseFloat(p.freight_value).toFixed(2)}</p>`;
-      if (p.product_weight_g != null) specsHTML += `<p><strong>Weight:</strong> ${p.product_weight_g} g</p>`;
-      specsHTML += `</div>`;
+      function renderProduct(p) {
+        const title = p.title || p.product_category_name || "Untitled Product";
+        const subtitle = p.review_comment ? p.review_comment.substring(0, 50) + '...' : "Check out the latest drop.";
+        const priceText = p.price != null ? `$${Number(p.price).toFixed(2)}` : "Price unavailable";
+        const productName = title;
+        const productPrice = p.price || 0;
+        const description = `
+          The ${title} is a must-have for any collection. 
+          Featuring premium materials and cutting-edge design, 
+          it's perfect for everyday wear or special occasions.
+        `;
+        const specs = [
+          { label: "Material", value: "Premium synthetic" },
+          { label: "Sole", value: "Rubber" },
+          { label: "Closure", value: "Lace-up" },
+          { label: "Fit", value: "True to size" },
+          { label: "Weight", value: "350g" },
+          { label: "Order Count", value: p.order_count || 0 },
+        ];
+        const specsHTML = specs.map(s => `
+          <div class="flex justify-between py-2 border-b border-gray-100">
+            <span>${s.label}</span>
+            <span class="font-medium">${s.value}</span>
+          </div>
+        `).join('');
 
-      const html = `
-        <div class="lg:sticky lg:top-10 h-[500px] bg-gray-100 flex items-center justify-center rounded-lg">
-          <span class="text-gray-400 text-xl font-semibold"></span>
-        </div>
+        const html = `
+          <div class="relative">
+            <img src="assets/placeholder.png" alt="${title}" class="w-full rounded-lg shadow-lg">
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold mb-2">${title}</h1>
+            <p class="text-xl text-gray-600 mb-4">${subtitle}</p>
+            <p class="text-2xl font-bold mb-6">${priceText}</p>
+            <div class="mb-6">
+              <h3 class="font-bold mb-2">Select Size</h3>
+              <div class="grid grid-cols-4 gap-2">
+                <button class="size-option py-3 text-sm font-medium rounded-lg">US 7</button>
+                <button class="size-option py-3 text-sm font-medium rounded-lg">US 8</button>
+                <button class="size-option py-3 text-sm font-medium rounded-lg">US 9</button>
+                <button class="size-option py-3 text-sm font-medium rounded-lg">US 10</button>
+                <button class="size-option py-3 text-sm font-medium rounded-lg">US 11</button>
+              </div>
+            </div>
 
-        <div>
-          <h2 class="text-xl font-normal text-gray-500">${subtitle}</h2>
-          <h1 class="text-4xl font-extrabold mt-1 mb-2">${title}</h1>
-          <p class="text-2xl font-semibold mb-6">${priceText}</p>
-          <hr class="my-6">
-          <div class="mb-6">
-            <p class="font-semibold mb-2">Select Size</p>
-            <div class="grid grid-cols-4 gap-2">
-              <button class="size-option py-3 text-sm font-medium rounded-lg">US 8</button>
-              <button class="size-option py-3 text-sm font-medium rounded-lg">US 9</button>
-              <button class="size-option py-3 text-sm font-medium rounded-lg">US 10</button>
-              <button class="size-option py-3 text-sm font-medium rounded-lg">US 11</button>
+            <button onclick="addToCart('${productId}', '${productName}', ${productPrice})"
+                    class="w-full bg-black text-white py-3 rounded-full font-bold text-lg hover:bg-gray-700 transition-colors mb-2">
+              Add to Bag
+            </button>
+            <button class="w-full bg-white text-black py-3 rounded-full font-bold text-lg border-2 border-gray-300 hover:border-black transition-colors">
+              Favorite
+            </button>
+            <p class="text-xs text-red-500 mt-2">This product is excluded from site promotions and discounts.</p>
+            <hr class="my-6">
+            <p class="text-gray-700 leading-relaxed mb-6">${description}</p>
+            <h3 class="font-bold text-lg mb-2">Product Specifications</h3>
+            ${specsHTML}
+            <div class="mt-6 text-sm">
+              <p class="text-green-600 font-semibold">Free Delivery and Returns</p>
+              <p class="text-gray-500">Style: ${productId}</p>
             </div>
           </div>
-
-          <button onclick="addToCart('${productId}', '${productName}', ${productPrice})" class="w-full bg-black text-white py-3 rounded-full font-bold text-lg hover:bg-gray-700 transition-colors mb-2">
-            Add to Bag
-          </button>
-          <button class="w-full bg-white text-black py-3 rounded-full font-bold text-lg border-2 border-gray-300 hover:border-black transition-colors">
-            Favorite
-          </button>
-          <p class="text-xs text-red-500 mt-2">This product is excluded from site promotions and discounts.</p>
-          <hr class="my-6">
-          <p class="text-gray-700 leading-relaxed mb-6">${description}</p>
-          <h3 class="font-bold text-lg mb-2">Product Specifications</h3>
-          ${specsHTML}
-          <div class="mt-6 text-sm">
-            <p class="text-green-600 font-semibold">Free Delivery and Returns</p>
-            <p class="text-gray-500">Style: ${productId}</p>
+          <div id="reviews-section" class="col-span-full mt-8">
+            <h2 class="text-2xl font-bold mb-4">Customer Reviews</h2>
+            <select id="db-toggle" class="mb-4 p-2 border rounded">
+              <option value="sql">SQL (Postgres)</option>
+              <option value="nosql">NoSQL (MongoDB)</option>
+            </select>
+            <div id="reviews-container" class="space-y-4 max-h-96 overflow-y-auto border p-4 rounded-lg"></div>
+            <div id="loading-sentinel" class="text-center py-4 text-gray-500">Loading more reviews...</div>
           </div>
-        </div>
-      `;
+        `;
 
-      contentArea.innerHTML = html;
-    }
+        contentArea.innerHTML = html;
 
-    async function loadProductDetails() {
-      const productId = getProductIdFromUrl();
-      if (!productId) {
-        loadingState.innerHTML = `<p class="text-xl text-red-500">Error: No product ID specified in the URL.</p>`;
-        return;
+        // Re-query DOM elements after innerHTML update
+        reviewsContainer = document.getElementById('reviews-container');
+        loadingSentinel = document.getElementById('loading-sentinel');
+        dbToggle = document.getElementById('db-toggle');
+
+        // Re-attach toggle listener
+        dbToggle.addEventListener('change', (e) => {
+          dbSource = e.target.value;
+          resetReviews();
+          loadReviews();
+        });
+
+        // Re-setup observer with new root
+        observer.disconnect();  // Disconnect previous if any
+        observer.observe(loadingSentinel);
       }
-      try {
-        const res = await fetch(api(`/api/products/${encodeURIComponent(productId)}`));
-        if (!res.ok) throw new Error(`Details for ID ${productId} not found (HTTP ${res.status}).`);
-        const json = await res.json();
-        // unwrap shapes: {success, product}, or just product
-        const product = json?.product ?? json;
-        loadingState.style.display = 'none';
-        renderProduct(product);
-      } catch (err) {
-        console.error("Error fetching product details:", err);
-        loadingState.innerHTML = `<p class="text-xl text-red-500">Failed to load product details: ${err.message}</p>`;
-        loadingState.style.display = 'block';
-      }
-    }
 
-    document.addEventListener('DOMContentLoaded', loadProductDetails);
-  </script>
+      async function loadProductDetails() {
+        productId = getProductIdFromUrl();  // Set global productId
+        if (!productId) {
+          loadingState.innerHTML = `<p class="text-xl text-red-500">Error: No product ID specified in the URL.</p>`;
+          return;
+        }
+        try {
+          const res = await fetch(sqlApi(`/api/products/${encodeURIComponent(productId)}`));
+          if (!res.ok) throw new Error(`Details for ID ${productId} not found (HTTP ${res.status}).`);
+          const json = await res.json();
+          const product = json?.product ?? json;
+          loadingState.style.display = 'none';
+          renderProduct(product);
+          // Load reviews after rendering
+          loadReviews();
+        } catch (err) {
+          console.error("Error fetching product details:", err);
+          loadingState.innerHTML = `<p class="text-xl text-red-500">Failed to load product details: ${err.message}</p>`;
+          loadingState.style.display = 'block';
+        }
+      }
+
+      // Reviews globals
+      let currentPage = 0;
+      let pageSize = 10;
+      let hasMoreReviews = true;
+      let isLoadingReviews = false;
+      let dbSource = 'sql';  // Default to SQL
+
+      let reviewsContainer = document.getElementById('reviews-container');
+      let loadingSentinel = document.getElementById('loading-sentinel');
+      let dbToggle = document.getElementById('db-toggle');
+
+      // Reset function
+      function resetReviews() {
+        currentPage = 0;
+        hasMoreReviews = true;
+        reviewsContainer.innerHTML = '';
+        loadingSentinel.textContent = 'Loading more reviews...';
+      }
+
+      // Fetch reviews
+      async function loadReviews() {
+        if (!hasMoreReviews || isLoadingReviews || !productId) return;
+        isLoadingReviews = true;
+
+        const api = dbSource === 'sql' ? sqlApi : mongoApi;
+        const param = dbSource === 'sql' ? 'offset' : 'skip';
+        const offsetOrSkip = currentPage * pageSize;
+        const url = `${api('/api/reviews/')}${encodeURIComponent(productId)}?limit=${pageSize}&${param}=${offsetOrSkip}`;
+
+        try {
+          const res = await fetch(url);
+          if (!res.ok) {
+            if (res.status === 404) {
+              loadingSentinel.textContent = 'No reviews available for this product.';
+            } else {
+              throw new Error(`HTTP ${res.status}`);
+            }
+            hasMoreReviews = false;
+            return;
+          }
+          const { reviews, hasMore } = await res.json();
+
+          if (reviews.length === 0 && currentPage === 0) {
+            loadingSentinel.textContent = 'No reviews yet.';
+            hasMoreReviews = false;
+            return;
+          }
+
+          reviews.forEach(review => {
+            const reviewDiv = document.createElement('div');
+            reviewDiv.className = 'border-b py-4';
+            reviewDiv.innerHTML = `
+              <div class="flex justify-between">
+                <span class="font-bold">${review.score} ⭐</span>
+                <span class="text-sm text-gray-500">${review.creation_date || 'N/A'}</span>
+              </div>
+              <p class="font-semibold">${review.title || 'No Title'}</p>
+              <p>${review.message}</p>
+            `;
+            reviewsContainer.appendChild(reviewDiv);
+          });
+
+          hasMoreReviews = hasMore;
+          if (!hasMoreReviews) loadingSentinel.textContent = 'No more reviews';
+          currentPage++;
+        } catch (err) {
+          console.error("Error fetching reviews:", err);
+          loadingSentinel.textContent = 'Error loading reviews. Please try again.';
+          hasMoreReviews = false;  // Stop retrying on error
+        } finally {
+          isLoadingReviews = false;
+        }
+      }
+
+      // Intersection Observer setup
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) loadReviews();
+        });
+      }, { root: null, threshold: 0 });  // root: null for viewport; adjust if needed to reviewsContainer after DOM ready
+
+      document.addEventListener('DOMContentLoaded', () => {
+        loadProductDetails();
+        // Initial observer setup; will re-attach after render if needed
+        if (loadingSentinel) observer.observe(loadingSentinel);
+      });
+    </script>
+
 </body>
 </html>
