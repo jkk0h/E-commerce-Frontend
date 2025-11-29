@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Database Command Interface</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- NEW: auth helpers -->
+  <script src="script/auth.js"></script>
   <!-- ADD: Sidebar animation + hide button -->
   <style>
     #sidebar {
@@ -26,7 +28,27 @@
   <link rel="stylesheet" href="styles.css">
   <script src="./script/config.js"></script>
 </head>
+
 <body class="p-6">
+  <!-- Global user / logout bar -->
+  <div
+    id="userBar"
+    class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1 rounded-full shadow border border-gray-200"
+  >
+    <span
+      id="userLabel"
+      class="text-xs sm:text-sm font-mono text-gray-700"
+    >
+      User: -
+    </span>
+    <button
+      id="logoutBtn"
+      class="text-xs sm:text-sm px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600"
+    >
+      Logout
+    </button>
+  </div>
+
   <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
     <!-- Title + close button -->
     <div class="p-6 border-b border-indigo-500 flex justify-between items-center">
@@ -115,17 +137,19 @@
 
       // AUTO-HIGHLIGHT CURRENT PAGE
       document.addEventListener("DOMContentLoaded", () => {
+        // Force login + show user bar
+        setupAuthUI({ requireLogin: true });
+
+        // Existing highlight logic
         const page = location.pathname.split("/").pop() || "index.html";
         document
           .querySelectorAll("#sidebar nav a")
           .forEach((a) => a.classList.remove("bg-indigo-600"));
-        if (page === "index.html")
-          document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
-        if (page === "admin.html")
-          document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
-        if (page === "commands.html")
-          document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
+        if (page === "index.html") document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
+        if (page === "admin.html") document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
+        if (page === "commands.html") document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
       });
+
 
       function showMessage(title, message) {
         document.getElementById("modal-title").textContent = title;
@@ -220,30 +244,50 @@
       });
 
       // --- parse "products.find({})" into { collection, method, args } ---
+      // --- parse "orders.find({ ... })" into { collection, method, args } ---
       function parseMongoCommand(cmd) {
         const parts = cmd.split(".");
-        if (parts.length < 2)
+        if (parts.length < 2) {
           throw new Error("Use format: collection.method(args)");
+        }
+
         const collection = parts[0].trim();
         const rest = parts.slice(1).join(".");
         const m = rest.match(/(\w+)\((.*)\)$/s);
-        if (!m) throw new Error("Could not parse method(args)");
+        if (!m) {
+          throw new Error("Could not parse method(args)");
+        }
+
         const method = m[1];
         const argsBody = m[2].trim();
+
         let args = [];
+
         if (argsBody.length) {
-          try {
-            const jsonString = argsBody.startsWith("[")
-              ? argsBody
-              : `[${argsBody}]`;
-            args = JSON.parse(jsonString);
-          } catch {
-            // fallback: treat as a single argument string
-            args = [argsBody];
+          if (argsBody.startsWith("[")) {
+            // Aggregate pipeline: orders.aggregate([ { $match: ... }, ... ])
+            try {
+              // one argument: the pipeline array
+              args = [eval(argsBody)];
+            } catch (e) {
+              throw new Error("Invalid pipeline syntax: " + e.message);
+            }
+          } else {
+            // Normal method like find({ ... }) or updateOne({ ... }, { ... })
+            try {
+              // Wrap in [] so we can support multiple args: method(a, b, c)
+              args = JSON.parse(`[${argsBody}]`);
+            } catch {
+              // Fallback: treat as a single raw argument string
+              args = [argsBody];
+            }
           }
         }
-        return { collection, method, args };
-      }
+
+  return { collection, method, args };
+}
+
+
 
       // --- NoSQL via Mongo API ---
       nosqlForm.addEventListener("submit", async (e) => {

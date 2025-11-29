@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up | Next-Gen Store</title>
+
+  <!-- Tailwind + Shared Styles -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="script/auth.js"></script>
+</head>
+<body>
+
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-brand">Next-Gen Store</div>
+      <h1 class="auth-title">Create an account</h1>
+      <p class="auth-subtitle">Use the same ID for customer checkout or admin seller ID.</p>
+
+      <form id="signupForm">
+        <div class="auth-form-group">
+          <label for="signupId" class="auth-label">User ID</label>
+          <input
+            id="signupId"
+            type="text"
+            class="auth-input"
+            placeholder="e.g. user001"
+            required
+          />
+        </div>
+
+        <div class="auth-form-group">
+          <label for="signupPassword" class="auth-label">Password</label>
+          <input
+            id="signupPassword"
+            type="password"
+            class="auth-input"
+            required
+          />
+        </div>
+
+        <div class="auth-actions">
+          <button type="submit" class="auth-button">
+            Sign Up
+          </button>
+        </div>
+      </form>
+
+      <p class="auth-footer-text">
+        Already have an account?
+        <a href="login.html">Log in</a>
+      </p>
+
+      <p id="signupMsg" class="auth-message"></p>
+
+      <div class="mt-4 text-center text-xs text-gray-400">
+        <a href="index.html#customer" class="hover:underline">
+          ← Back to shop
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("signupForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const id = document.getElementById("signupId").value.trim();
+      const password = document.getElementById("signupPassword").value;
+      const msg = document.getElementById("signupMsg");
+
+      if (!id || !password) {
+        msg.textContent = "Please fill in all fields.";
+        return;
+      }
+
+      const users = getUsers();
+
+      if (users.some((u) => u.id === id)) {
+        msg.textContent = "This ID already exists. Please choose another one.";
+        return;
+      }
+
+      users.push({ id, password });
+      saveUsers(users);
+
+      setCurrentUser(id, password);
+
+      msg.textContent = "Account created! Redirecting…";
+
+      setTimeout(() => {
+        window.location.href = "index.html#customer";
+      }, 700);
+    });
+  </script>
+</body>
+</html>

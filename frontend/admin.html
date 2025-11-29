@@ -6,9 +6,29 @@
   <title>Admin | Next-Gen Store</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
+  <script src="script/auth.js"></script>
   <script src="./script/config.js"></script>
 </head>
 <body class="bg-gray-50 p-8 text-gray-800">
+  <!-- Global user / logout bar -->
+  <div
+    id="userBar"
+    class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1 rounded-full shadow border border-gray-200"
+  >
+    <span
+      id="userLabel"
+      class="text-xs sm:text-sm font-mono text-gray-700"
+    >
+      User: -
+    </span>
+    <button
+      id="logoutBtn"
+      class="text-xs sm:text-sm px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600"
+    >
+      Logout
+    </button>
+  </div>
+
   <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
     <!-- Title + close button -->
     <div class="p-6 border-b border-indigo-500 flex justify-between items-center">
@@ -111,6 +131,9 @@
     const sidebar = document.getElementById("sidebar");
     document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
     document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
+    document.addEventListener("DOMContentLoaded", () => {
+      setupAuthUI({ requireLogin: true });
+    });
 
     function coalesceName(p) {
       return p.title || p.product_category_name || p.name || "";
@@ -192,8 +215,22 @@
         return;
       }
 
-      const payload = { title, price, product_id, quantity };
+      // Attach logged-in identity to admin seed actions
+      const currentUser = getCurrentUser();
+      const identityId = currentUser?.id?.trim() || null;
+
+      const payload = {
+        title,
+        price,
+        product_id,
+        quantity,
+        // Used by SQL + Mongo backends to tag admin-created seed orders
+        seller_id: identityId,
+        admin_id: identityId,
+      };
+
       const perfEl = document.getElementById("adminPerfInfo");
+
 
       // Separate timers for SQL and Mongo (same overall window, but still useful)
       const tSqlStart = performance.now();
@@ -280,6 +317,12 @@
     };
 
     loadAdminTable();
+  </script>
+    <!-- NEW: force login + wire user bar on admin -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      setupAuthUI({ requireLogin: true });
+    });
   </script>
 </body>
 </html>

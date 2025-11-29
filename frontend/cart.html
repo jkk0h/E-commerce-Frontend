@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Shopping Cart</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- NEW: auth helpers -->
+    <script src="script/auth.js"></script>
     <script src="./script/config.js"></script>
     <style>
         .cart-item-grid {
@@ -15,7 +17,26 @@
         }
     </style>
 </head>
+
 <body class="bg-gray-50 text-gray-800">
+    <!-- Global user / logout bar -->
+    <div
+    id="userBar"
+    class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1 rounded-full shadow border border-gray-200"
+    >
+    <span
+        id="userLabel"
+        class="text-xs sm:text-sm font-mono text-gray-700"
+    >
+        User: -
+    </span>
+    <button
+        id="logoutBtn"
+        class="text-xs sm:text-sm px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600"
+    >
+        Logout
+    </button>
+    </div>
 
     <header class="h-16 flex items-center border-b border-gray-200 bg-white">
         <div class="max-w-7xl mx-auto px-6 w-full flex items-center justify-between">
@@ -187,7 +208,14 @@
         }
 
         // Initialize the cart view on page load
-        document.addEventListener('DOMContentLoaded', renderCart);
+        document.addEventListener('DOMContentLoaded', () => {
+        // Require login + display user bar
+        setupAuthUI({ requireLogin: true });
+
+        // Existing behavior
+        renderCart();
+        });
+
     </script>
 </body>
 </html>

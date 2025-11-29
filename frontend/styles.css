@@ -3,96 +3,131 @@
    ============================= */
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-color: #ffffff; /* pure white */
   color: #1f2937;
   scroll-behavior: smooth;
   min-height: 100vh;
+  margin: 0;
 }
 
-/* Remove section backgrounds */
-section, main {
+/* Remove section backgrounds so Tailwind cards stand out */
+section,
+main {
   background: none !important;
 }
 
-/* Sidebar slide-in */
+/* Basic link behaviour */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: none;
+}
+
+/* Simple container utility (used in some pages) */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* Sidebar slide helper (for pages that use .active) */
 #sidebar {
-  transition: transform 0.3s ease-in-out;
   transform: translateX(-100%);
 }
 #sidebar.active {
   transform: translateX(0);
 }
 
-/* Headings */
-h1, h2, h3 {
-  color: #1e1b4b; /* dark indigo */
-}
-
-/* Primary button style (for reuse) */
+/* Buttons (for non-Tailwind buttons) */
 .btn-primary {
   background-color: #4f46e5;
-  color: white;
-  font-weight: 600;
+  color: #ffffff;
   border-radius: 0.5rem;
-  transition: all 0.3s ease;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease,
+    transform 0.1s ease;
 }
+
 .btn-primary:hover {
   background-color: #4338ca;
-  transform: scale(1.03);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+  transform: translateY(-1px);
 }
 
-/* Search Input */
-.search-input {
-  border: 1px solid #d1d5db;
-  padding: 0.75rem;
-  border-radius: 0.5rem 0 0 0.5rem;
-  font-size: 1.125rem;
-  outline: none;
-}
-.search-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+.btn-primary:active {
+  background-color: #3730a3;
+  transform: translateY(0);
 }
 
-/* Error message text */
-.error-message {
-  color: #dc2626;
-  font-weight: 600;
-  text-align: center;
-  margin-top: 0.75rem;
-}
-
-/* Table styles */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-  background-color: white;
+/* Secondary / outline style */
+.btn-outline {
+  background-color: transparent;
+  color: #4b5563;
   border-radius: 0.5rem;
-  overflow: hidden;
-}
-th, td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-thead {
-  background-color: #f3f4f6;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: #374151;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-/* Product cards */
+.btn-outline:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+/* Cards (product cards, etc.) */
 .card {
-  background-color: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  background-color: #ffffff;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 6px 10px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+/* Simple badge style (for tags / statuses) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background-color: #eef2ff;
+  color: #3730a3;
+}
+
+/* Tables (if you use any normal <table>) */
+table.simple-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+table.simple-table th,
+table.simple-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+}
+table.simple-table th {
+  text-align: left;
+  font-weight: 600;
+  color: #4b5563;
+  background-color: #f9fafb;
 }
 
 /* Footer */
@@ -101,4 +136,135 @@ footer {
   color: #9ca3af;
   text-align: center;
   margin-top: 2rem;
+}
+
+/* =============================
+   Auth Pages (Login + Signup)
+   ============================= */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  background: radial-gradient(circle at top, #eef2ff 0, #ffffff 55%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 2.25rem 2.5rem;
+  border-radius: 1.25rem;
+  background-color: #ffffff;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e5e7eb;
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+  margin-bottom: 0.35rem;
+}
+
+.auth-subtitle {
+  font-size: 0.9rem;
+  color: #6b7280;
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.auth-form-group {
+  margin-bottom: 1rem;
+}
+
+.auth-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4b5563;
+  margin-bottom: 0.25rem;
+}
+
+.auth-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #d1d5db;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background-color: #f9fafb;
+}
+
+.auth-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.35);
+  background-color: #ffffff;
+}
+
+.auth-actions {
+  margin-top: 1.25rem;
+}
+
+.auth-button {
+  width: 100%;
+  border: none;
+  border-radius: 0.85rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #ffffff;
+  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease,
+    filter 0.12s ease;
+}
+
+.auth-button:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 14px 35px rgba(79, 70, 229, 0.45);
+  transform: translateY(-1px);
+}
+
+.auth-button:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.35);
+}
+
+.auth-footer-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: center;
+  margin-top: 1.1rem;
+}
+
+.auth-footer-text a {
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.auth-footer-text a:hover {
+  text-decoration: underline;
+}
+
+.auth-message {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* small logo / breadcrumb at top of card */
+.auth-brand {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  color: #4f46e5;
+  text-align: center;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
 }

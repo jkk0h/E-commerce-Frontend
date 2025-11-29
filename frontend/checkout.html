@@ -7,9 +7,29 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles.css">
     <script src="./script/config.js"></script>
+    <script src="./script/auth.js"></script>
 </head>
 <body class="p-8 bg-gray-100 min-h-screen">
-    <!-- Shared sidebar navigation -->
+  <!-- Global user / logout bar -->
+  <div
+    id="userBar"
+    class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1 rounded-full shadow border border-gray-200"
+  >
+    <span
+      id="userLabel"
+      class="text-xs sm:text-sm font-mono text-gray-700"
+    >
+      User: -
+    </span>
+    <button
+      id="logoutBtn"
+      class="text-xs sm:text-sm px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600"
+    >
+      Logout
+    </button>
+  </div>
+
+    <!-- Sidebar navigation -->
     <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
         <!-- Title + close button -->
         <div class="p-6 border-b border-indigo-500 flex justify-between items-center">
@@ -17,62 +37,44 @@
             <button id="closeSidebar" class="text-white text-2xl font-bold">&times;</button>
         </div>
 
-        <!-- 🔽 DB engine toggle (shared on all pages) -->
-        <div class="px-6 py-3 border-b border-indigo-500 bg-indigo-800/40 text-xs space-y-1">
-            <div class="flex items-center justify-between gap-2">
-            <span class="uppercase tracking-wide text-[11px]">DB Engine</span>
-            <select
-                data-role="db-engine-select"
-                class="text-black text-xs rounded px-2 py-1"
-            >
-                <option value="sql">SQL (Postgres)</option>
-                <option value="nosql">NoSQL (MongoDB)</option>
-            </select>
-            </div>
-            <p class="opacity-80">
-            Current:
-            <span
-                data-role="db-engine-badge"
-                class="font-semibold"
-            ></span>
-            </p>
-        </div>
-
-        <div id="timing-box"
-            style="margin-top:16px; padding:16px; background:#eef; border-radius:8px; font-size:14px;">
-        ⏳ Timing results will appear here...
-        </div>
-
-
-        <!-- existing nav links for this page go here -->
         <nav class="flex-grow p-4 space-y-2">
-            <!-- keep your existing <a> links unchanged -->
-            <a href="index.html#customer" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛍 Customer View</a>
-            <a href="cart.html" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">🛒 Cart</a>
-            <a href="checkout.html" class="block px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition">💳 Checkout</a>
-            <a href="admin.html" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">⚙️ Admin View</a>
-            <a href="commands.html" class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">💻 Commands</a>
+            <a href="index.html#customer" id="nav-customer"
+               class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">
+              🛍 Customer View
+            </a>
+            <a href="admin.html" id="nav-admin"
+               class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">
+              ⚙️ Admin View
+            </a>
+            <a href="commands.html" id="nav-commands"
+               class="block px-4 py-2 rounded-lg hover:bg-indigo-500 transition">
+              💻 Commands
+            </a>
+
+            <!-- NEW: Logout -->
+            <button
+              id="logoutBtn"
+              class="mt-6 w-full text-left px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition"
+            >
+              🚪 Logout
+            </button>
         </nav>
     </aside>
 
+    <!-- Hamburger button -->
+    <button id="menuBtn" class="fixed top-5 left-5 bg-indigo-600 text-white p-2 rounded-md shadow-md z-50">
+      ☰
+    </button>
 
-  <!-- Hamburger button -->
-  <button id="menuBtn" class="fixed top-5 left-5 bg-indigo-600 text-white p-2 rounded-md shadow-md z-50">☰</button>
-    <div class="max-w-3xl mx-auto bg-white p-10 rounded-2xl shadow-3xl">
+    <div class="max-w-3xl mx-auto bg-white p-10 rounded-2xl shadow-3xl mt-10">
         <h1 class="text-4xl font-extrabold text-center text-cyan-600 mb-2">Checkout Details 💳</h1>
-        <p class="text-center text-gray-500 mb-8">Enter your information to complete your order.</p>
+        <p class="text-center text-gray-500 mb-2">Enter your information to complete your order.</p>
+        <p id="checkoutUserInfo" class="text-center text-xs text-gray-500 mb-8"></p>
 
         <form id="checkoutForm" class="space-y-6">
 
             <div class="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
-                <h2 class="text-2xl font-semibold text-indigo-700 mb-4 flex items-center">
-                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                        </path>
-                    </svg>
-                    Contact & Shipping
-                </h2>
+                <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Contact & Shipping</h2>
 
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
@@ -93,255 +95,241 @@
                 </div>
             </div>
 
-            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Order Summary</h2>
-                <p id="order-summary" class="text-lg font-bold text-teal-600">
-                    Total: $0.00
+            <!-- You can keep your existing payment section & summary; core part is at the bottom -->
+
+            <div class="flex justify-between items-center mt-8">
+                <p id="order-summary" class="text-gray-600 text-sm">
+                  Loading cart summary...
                 </p>
-                <p class="text-sm text-gray-500 mt-2">
-                    This summary is calculated from your current cart contents.
-                </p>
+                <button type="submit" id="placeOrderBtn"
+                        class="bg-teal-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-teal-700 transition">
+                    Place Order
+                </button>
             </div>
 
-            <button type="submit" id="placeOrderBtn"
-                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl transition-colors duration-300 shadow-lg text-xl">
-                Place Order
-            </button>
-
-            <div id="message" class="mt-4 text-center font-medium"></div>
-            <p id="perfInfo" class="mt-2 text-center text-sm text-gray-600"></p>
-
+            <p id="perfInfo" class="mt-4 text-xs text-gray-500"></p>
+            <div id="message" class="mt-4 text-sm"></div>
         </form>
-
     </div>
 
-      <script>
-        // Sidebar toggle (same behaviour as other pages)
-        const sidebar = document.getElementById("sidebar");
-        const menuBtn = document.getElementById("menuBtn");
-        const closeSidebarBtn = document.getElementById("closeSidebar");
+    <script>
+      // Sidebar toggle
+      const sidebar = document.getElementById("sidebar");
+      if (sidebar) {
+        document.getElementById("menuBtn").onclick = () =>
+          sidebar.classList.add("active");
+        document.getElementById("closeSidebar").onclick = () =>
+          sidebar.classList.remove("active");
+      }
 
-        if (sidebar && menuBtn && closeSidebarBtn) {
-            menuBtn.onclick = () => sidebar.classList.add("active");
-            closeSidebarBtn.onclick = () => sidebar.classList.remove("active");
+      // ---------- Cart helpers ----------
+      function getCart() {
+        try {
+          // Prefer the new, correct key; fall back to old one
+          const stored =
+            localStorage.getItem("cartItems") ?? localStorage.getItem("cart");
+          return stored ? JSON.parse(stored) : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function calculateTotals(cart) {
+        let subtotal = 0;
+        let totalItems = 0;
+
+        cart.forEach((item) => {
+          subtotal += item.price * item.quantity;
+          totalItems += item.quantity;
+        });
+
+        const shipping = subtotal > 0 ? 5.0 : 0;
+        const taxes = subtotal * 0.09;
+        const total = subtotal + shipping + taxes;
+
+        return { subtotal, totalItems, shipping, taxes, total };
+      }
+
+      const orderSummaryEl = document.getElementById("order-summary");
+      const placeOrderBtn = document.getElementById("placeOrderBtn");
+      const perfInfo = document.getElementById("perfInfo");
+
+      function renderOrderSummary() {
+        const cart = getCart();
+        if (!cart.length) {
+          orderSummaryEl.textContent =
+            "Your cart is empty. Please go back and add some products.";
+          orderSummaryEl.classList.remove("text-teal-600");
+          orderSummaryEl.classList.add("text-red-500");
+          return;
         }
 
-        // ---------------- Cart helpers ----------------
-        function getCart() {
-            try {
-            return JSON.parse(localStorage.getItem("cartItems")) || [];
-            } catch (e) {
-            console.error("Failed to read cart from localStorage", e);
-            return [];
-            }
+        orderSummaryEl.classList.remove("text-red-500");
+        orderSummaryEl.classList.add("text-teal-600");
+
+        const { subtotal, totalItems, shipping, taxes, total } =
+          calculateTotals(cart);
+
+        orderSummaryEl.textContent =
+          `Items: ${totalItems} • Subtotal: $${subtotal.toFixed(2)} ` +
+          `• Shipping: $${shipping.toFixed(2)} • Tax: $${taxes.toFixed(
+            2
+          )} ` +
+          `• Total: $${total.toFixed(2)}`;
+      }
+
+      // ---------- Auth UI + initial render ----------
+      document.addEventListener("DOMContentLoaded", () => {
+        // 1) Force login & show global user/logout UI
+        //    (requires setupAuthUI to be defined in auth.js)
+        setupAuthUI({ requireLogin: true });
+
+        // 2) Show which user is checking out
+        const user = getCurrentUser();
+        const infoEl = document.getElementById("checkoutUserInfo");
+        if (user && user.id) {
+          infoEl.textContent = `Checking out as: ${user.id}`;
+        } else {
+          infoEl.textContent =
+            "Not logged in. guest_… ID will be used if email is also empty.";
         }
 
-        const SHIPPING_FEE = 5.0;
-        const TAX_RATE = 0.05;
-
-        function calculateTotals(cart) {
-            const subtotal = cart.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0
-            );
-            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-            let shipping = 0;
-            let taxes = 0;
-            let total = 0;
-
-            if (totalItems > 0) {
-            shipping = SHIPPING_FEE;
-            taxes = subtotal * TAX_RATE;
-            total = subtotal + shipping + taxes;
-            }
-
-            return { subtotal, totalItems, shipping, taxes, total };
-        }
-
-        const form = document.getElementById("checkoutForm");
-        const messageDiv = document.getElementById("message");
-        const placeOrderBtn = document.getElementById("placeOrderBtn");
-        const orderSummaryEl = document.getElementById("order-summary");
-        const perfInfo = document.getElementById("perfInfo");
-
-        function renderOrderSummary() {
-            const cart = getCart();
-            if (!cart.length) {
-            orderSummaryEl.textContent =
-                "Your cart is empty. Please go back and add some products.";
-            orderSummaryEl.classList.remove("text-teal-600");
-            orderSummaryEl.classList.add("text-red-500");
-            return;
-            }
-
-            orderSummaryEl.classList.remove("text-red-500");
-            orderSummaryEl.classList.add("text-teal-600");
-
-            const { subtotal, totalItems, shipping, taxes, total } =
-            calculateTotals(cart);
-            orderSummaryEl.textContent =
-            `Items: ${totalItems} • Subtotal: $${subtotal.toFixed(
-                2
-            )} ` +
-            `• Shipping: $${shipping.toFixed(2)} • Tax: $${taxes.toFixed(
-                2
-            )} ` +
-            `• Total: $${total.toFixed(2)}`;
-        }
-
-        // Show current cart totals when page loads
+        // 3) Render summary once DOM & cart are ready
         renderOrderSummary();
+      });
 
-        // ---------------- Checkout submit ----------------
-        form.addEventListener("submit", async function (e) {
-            e.preventDefault();
+      // ---------- Checkout submit handler ----------
+      document
+        .getElementById("checkoutForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
 
-            const cart = getCart();
-            if (!cart.length) {
+          const cart = getCart();
+          const messageDiv = document.getElementById("message");
+          messageDiv.textContent = "";
+
+          if (!cart.length) {
             messageDiv.className = "text-red-600";
             messageDiv.textContent =
-                "Your cart is empty. Please add items before checking out.";
+              "Cart is empty. Please add items before checkout.";
             return;
-            }
+          }
 
-            placeOrderBtn.disabled = true;
-            placeOrderBtn.textContent = "Processing…";
-            messageDiv.textContent = "";
-            perfInfo.textContent = "";
+          placeOrderBtn.disabled = true;
+          placeOrderBtn.textContent = "Processing...";
 
-            // Convert cart into backend format
+          try {
+            // Backend expects `id`; cart items are saved as { id, name, price, quantity }
             const items = cart.map((item) => ({
-            id: item.id,
-            quantity: item.quantity,
-            price: item.price,
+              id: item.id,
+              title: item.name || item.title || item.id,
+              quantity: item.quantity,
+              price: item.price,
             }));
 
-            // Clean + safe customer ID (same as SQL API expects)
-            let customerId = document.getElementById("email").value.trim();
-            customerId =
-            customerId || "guest000000000000000000000000000"; // 32 chars
+            // Prefer logged-in ID as customer_id
+            const currentUser = getCurrentUser();
+            let customerId =
+              (currentUser && currentUser.id) ||
+              document.getElementById("email").value.trim() ||
+              "guest000000000000000000000000000";
+
             customerId = customerId.slice(0, 32);
 
             const payload = {
-            customer_id: customerId,
-            items,
+              customer_id: customerId,
+              items,
             };
 
-            // Timings
             const tOverallStart = performance.now();
             let sqlRoundTripMs = null;
             let mongoRoundTripMs = null;
 
-            try {
             const tSqlStart = performance.now();
             const tMongoStart = performance.now();
 
             const [sqlRes, mongoRes] = await Promise.all([
-                fetch(sqlApi("/api/orders"), {
+              fetch(sqlApi("/api/orders"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
-                }),
-                fetch(mongoApi("/api/orders"), {
+              }),
+              fetch(mongoApi("/api/orders"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
-                }),
+              }),
             ]);
 
             const tSqlEnd = performance.now();
             const tMongoEnd = performance.now();
+
             sqlRoundTripMs = tSqlEnd - tSqlStart;
             mongoRoundTripMs = tMongoEnd - tMongoStart;
 
             const [sqlJson, mongoJson] = await Promise.all([
-                sqlRes.json().catch(() => ({})),
-                mongoRes.json().catch(() => ({})),
+              sqlRes.json().catch(() => ({})),
+              mongoRes.json().catch(() => ({})),
             ]);
 
             const tOverallEnd = performance.now();
             const bothRoundTripMs = tOverallEnd - tOverallStart;
 
-            const sqlOk = sqlRes.ok;
-            const mongoOk = mongoRes.ok;
+            console.log("SQL order response:", sqlJson);
+            console.log("Mongo order response:", mongoJson);
 
-            const sqlOrderId = sqlJson?.orderId || "N/A";
-            const mongoOrderId = mongoJson?.orderId || "N/A";
-
-            const sqlDbMs =
-                typeof sqlJson?.sqlDbMs === "number"
-                ? sqlJson.sqlDbMs.toFixed(2)
-                : "N/A";
-            const sqlBackendMs =
-                typeof sqlJson?.backendTotalMs === "number"
-                ? sqlJson.backendTotalMs.toFixed(2)
-                : "N/A";
-
-            const mongoDbMs =
-                typeof mongoJson?.mongoDbMs === "number"
-                ? mongoJson.mongoDbMs.toFixed(2)
-                : "N/A";
+            let sqlDbMs =
+              typeof sqlJson?.sqlDbMs === "number" ? sqlJson.sqlDbMs : null;
+            let sqlBackendMs =
+              typeof sqlJson?.backendTotalMs === "number"
+                ? sqlJson.backendTotalMs
+                : null;
+            let mongoDbMs =
+              typeof mongoJson?.mongoDbMs === "number"
+                ? mongoJson.mongoDbMs
+                : typeof mongoJson?.dbMs === "number"
+                ? mongoJson.dbMs
+                : null;
 
             const sqlRt =
-                sqlRoundTripMs != null ? sqlRoundTripMs.toFixed(2) : "N/A";
+              sqlRoundTripMs != null ? sqlRoundTripMs.toFixed(2) : "n/a";
             const mongoRt =
-                mongoRoundTripMs != null ? mongoRoundTripMs.toFixed(2) : "N/A";
+              mongoRoundTripMs != null ? mongoRoundTripMs.toFixed(2) : "n/a";
 
-            // ----- Message text depending on success/failure -----
-            if (sqlOk && mongoOk) {
-                messageDiv.className = "text-green-700";
-                messageDiv.innerHTML =
-                `Order placed successfully in <strong>SQL</strong> and <strong>Mongo</strong>.<br>` +
-                `SQL Order ID: <strong>${sqlOrderId}</strong><br>` +
-                `Mongo Order ID: <strong>${mongoOrderId}</strong><br>` +
-                `<a href="index.html#customer" class="underline text-cyan-700 mt-2 inline-block">Back to store</a>`;
+            const sqlDb = sqlDbMs != null ? sqlDbMs.toFixed(2) : "n/a";
+            const sqlBackend =
+              sqlBackendMs != null ? sqlBackendMs.toFixed(2) : "n/a";
+            const mongoDb = mongoDbMs != null ? mongoDbMs.toFixed(2) : "n/a";
+            const bothRt = bothRoundTripMs.toFixed(2);
 
-                // Clear cart & form only if both succeeded
-                localStorage.removeItem("cartItems");
-                form.reset();
-                renderOrderSummary();
-            } else if (sqlOk && !mongoOk) {
-                messageDiv.className = "text-yellow-700";
-                messageDiv.innerHTML =
-                `Order saved in <strong>SQL</strong>, but <strong>Mongo failed</strong> ` +
-                `(${mongoJson?.error || mongoRes.status}).<br>` +
-                `SQL Order ID: <strong>${sqlOrderId}</strong>.<br>` +
-                `You can retry the Mongo write later from the Commands page.`;
-            } else if (!sqlOk && mongoOk) {
-                messageDiv.className = "text-yellow-700";
-                messageDiv.innerHTML =
-                `Order saved in <strong>Mongo</strong>, but <strong>SQL failed</strong> ` +
-                `(${sqlJson?.error || sqlRes.status}).<br>` +
-                `Mongo Order ID: <strong>${mongoOrderId}</strong>.`;
-            } else {
-                messageDiv.className = "text-red-600";
-                messageDiv.innerHTML =
-                `Order failed in <strong>both</strong> SQL and Mongo.<br>` +
-                `SQL error: ${sqlJson?.error || sqlRes.status}<br>` +
-                `Mongo error: ${mongoJson?.error || mongoRes.status}`;
-            }
+            messageDiv.className = "text-green-700";
+            messageDiv.textContent =
+              "Order placed in both systems! Check the performance stats below.";
 
-            // ----- Perf info line -----
             perfInfo.textContent =
-                `SQL → DB: ${sqlDbMs} ms | SQL backend: ${sqlBackendMs} ms | SQL end-to-end: ${sqlRt} ms || ` +
-                `Mongo → DB: ${mongoDbMs} ms | Mongo end-to-end: ${mongoRt} ms | ` +
-                `End-to-end (click → both responses): ${bothRoundTripMs.toFixed(
-                2
-                )} ms`;
-            } catch (error) {
-            console.error("Checkout error:", error);
+              `SQL → DB: ${sqlDb} ms | SQL backend: ${sqlBackend} ms | SQL round-trip: ${sqlRt} ms. ` +
+              `Mongo → DB: ${mongoDb} ms | Mongo round-trip: ${mongoRt} ms. ` +
+              `Both servers (overall fetch+render): ${bothRt} ms.`;
+
+            // Clear cart on success
+            localStorage.removeItem("cartItems");
+            localStorage.removeItem("cart");
+          } catch (err) {
+            console.error("Checkout error:", err);
             messageDiv.className = "text-red-600";
-            messageDiv.innerHTML =
-                `Error placing order: ${error.message}. Please try again.`;
-            } finally {
+            messageDiv.textContent =
+              "Something went wrong placing your order. Please try again.";
+            perfInfo.textContent = "";
+          } finally {
             placeOrderBtn.disabled = false;
             placeOrderBtn.textContent = "Place Order";
-            }
+          }
         });
-        </script>
-
-
-
+    </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      setupAuthUI({ requireLogin: true });
+    });
+    </script>
 </body>
 </html>

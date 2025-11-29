@@ -5,10 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Shop | Next-Gen Store</title>
 
-  <!-- Tailwind + Config -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="styles.css">
-  <script src="./script/config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="styles.css">
+
+<!-- Auth helpers (getCurrentUser, etc.) -->
+<script src="script/auth.js"></script>
+
+<!-- API config (sqlApi/mongoApi) -->
+<script src="./script/config.js"></script>
+
 
   <!-- Sidebar Slide Animation -->
   <style>
@@ -25,7 +30,25 @@
   </style>
 </head>
 <body class="p-6 bg-gray-50">
-
+   <!-- Global user / logout bar -->
+  <div
+    id="userBar"
+    class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1 rounded-full shadow border border-gray-200"
+  >
+    <span
+      id="userLabel"
+      class="text-xs sm:text-sm font-mono text-gray-700"
+    >
+      User: -
+    </span>
+    <button
+      id="logoutBtn"
+      class="text-xs sm:text-sm px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600"
+    >
+      Logout
+    </button>
+  </div>
+ 
   <!-- SAME SIDEBAR AS COMMANDS.HTML -->
   <aside id="sidebar" class="fixed top-0 left-0 w-64 h-full bg-indigo-700 text-white flex flex-col z-40">
   <!-- Title + close button -->
@@ -78,15 +101,27 @@
       const sidebar = document.getElementById("sidebar");
       document.getElementById("menuBtn").onclick = () => sidebar.classList.add("active");
       document.getElementById("closeSidebar").onclick = () => sidebar.classList.remove("active");
-
+      
       // AUTO HIGHLIGHT CURRENT PAGE
       document.addEventListener("DOMContentLoaded", () => {
-        const page = location.pathname.split("/").pop() || "index.html";
-        document.querySelectorAll("#sidebar nav a").forEach(a => a.classList.remove("bg-indigo-600"));
-        if (page === "index.html")     document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
-        if (page === "admin.html")     document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
-        if (page === "commands.html")  document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
-      });
+      // 1) Shared auth header + forced login
+      setupAuthUI({ requireLogin: true });
+
+      // 2) Sidebar highlight (unchanged)
+      const page = location.pathname.split("/").pop() || "index.html";
+      document
+        .querySelectorAll("#sidebar nav a")
+        .forEach((a) => a.classList.remove("bg-indigo-600"));
+
+      if (page === "index.html")
+        document.getElementById("nav-customer")?.classList.add("bg-indigo-600");
+      if (page === "admin.html")
+        document.getElementById("nav-admin")?.classList.add("bg-indigo-600");
+      if (page === "commands.html")
+        document.getElementById("nav-commands")?.classList.add("bg-indigo-600");
+    });
+
+
 
       // === PRODUCT DISPLAY ===
       const container = document.getElementById("productsContainer");
@@ -151,6 +186,13 @@
       searchInput.addEventListener("input", debounce(applyFiltersAndSort, 200));
       sortSelect.addEventListener("change", applyFiltersAndSort);
       loadProducts();
+  </script>
+
+   <!-- NEW: force login + wire user bar -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      setupAuthUI({ requireLogin: true });
+    });
   </script>
 
 </body>
