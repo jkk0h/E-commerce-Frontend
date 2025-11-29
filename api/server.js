@@ -10,9 +10,6 @@ import crypto from "crypto";
 const PORT = process.env.PORT || 3001;
 const POSTGRES_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 
-
-
-
 if (!POSTGRES_URL) {
     console.error("❌ Missing POSTGRES_URL env var.");
     process.exit(1);
@@ -28,11 +25,14 @@ function shouldUseSsl() {
     } catch { }
     return true; // default SSL for non-local DBs
 }
-const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: shouldUseSsl() ? { rejectUnauthorized: false } : false });
+
+const pool = new pg.Pool({
+    connectionString: POSTGRES_URL,
+    ssl: shouldUseSsl() ? { rejectUnauthorized: false } : false,
+});
 pool.query("SELECT NOW()")
     .then(() => console.log("Postgres connected successfully"))
     .catch(err => console.error("Postgres connection error:", err.message));
-
 
 const app = express();
 app.use(cors());
@@ -43,14 +43,13 @@ const toUiProduct = (row) => {
     const pid = row.id; // this is product_id in your SQL
     return {
         id: pid,
-        product_id: pid,     // 👈 new
-        title: pid,          // you can change this later to a real name
+        product_id: pid,
+        title: pid,
         name: pid,
         price: row.price !== null ? Number(row.price) : null,
         order_count: Number(row.order_count || 0),
     };
 };
-
 
 async function tableExists(name) {
     const q = `SELECT to_regclass($1) AS t`;
@@ -78,40 +77,54 @@ app.get("/api/products", async (req, res) => {
     const { search = "", limit = 50, offset = 0 } = req.query;
     try {
         const src = await pickProductSource();
-        if (src === "none") return res.json([]); // nothing loaded yet
+        if (src === "none") return res.json([]);
 
         let rows;
+        const searchTerm = String(search).trim();
+        const lim = +limit;
+        const off = +offset;
+
         if (src === "normalized") {
-            // order_items_core(product_id) + order_item_pricing(price)
-            // GROUP to form "catalog" without a products table.
+            // Normalized path: join through orders_timestamps to get the latest purchase time
             const sql = `
-        SELECT oic.product_id AS id,
-               ROUND(AVG(oip.price)::numeric, 2) AS price,
-               COUNT(*) AS order_count
-        FROM order_items_core oic
-        JOIN order_item_pricing oip
-          ON oip.order_id = oic.order_id AND oip.order_item_id = oic.order_item_id
-        WHERE ($1 = '' OR oic.product_id ILIKE '%'||$1||'%')
-        GROUP BY oic.product_id
-        ORDER BY order_count DESC
-        LIMIT $2 OFFSET $3`;
-            const { rows: r } = await pool.query(sql, [String(search).trim(), +limit, +offset]);
+                SELECT
+                    oic.product_id AS id,
+                    ROUND(AVG(oip.price)::numeric, 2) AS price,
+                    COUNT(*) AS order_count,
+                    MAX(ot.order_purchase_timestamp) AS last_order_ts
+                FROM order_items_core oic
+                JOIN order_item_pricing oip
+                  ON oip.order_id = oic.order_id
+                 AND oip.order_item_id = oic.order_item_id
+                JOIN orders_timestamps ot
+                  ON ot.order_id = oic.order_id
+                WHERE ($1 = '' OR oic.product_id ILIKE '%' || $1 || '%')
+                GROUP BY oic.product_id
+                ORDER BY last_order_ts DESC NULLS LAST
+                LIMIT $2 OFFSET $3
+            `;
+            const { rows: r } = await pool.query(sql, [searchTerm, lim, off]);
             rows = r;
         } else {
-            // staging `orders` table has product_id + price (from orders.csv)
+            // Staging path: use the flat orders table, which already has order_purchase_timestamp
             const sql = `
-        SELECT product_id AS id,
-               ROUND(AVG(price)::numeric, 2) AS price,
-               COUNT(*) AS order_count
-        FROM orders
-        WHERE product_id IS NOT NULL
-          AND ($1 = '' OR product_id ILIKE '%'||$1||'%')
-        GROUP BY product_id
-        ORDER BY order_count DESC
-        LIMIT $2 OFFSET $3`;
-            const { rows: r } = await pool.query(sql, [String(search).trim(), +limit, +offset]);
+                SELECT
+                    product_id AS id,
+                    ROUND(AVG(price)::numeric, 2) AS price,
+                    COUNT(*) AS order_count,
+                    MAX(order_purchase_timestamp) AS last_order_ts
+                FROM orders
+                WHERE product_id IS NOT NULL
+                  AND ($1 = '' OR product_id ILIKE '%' || $1 || '%')
+                GROUP BY product_id
+                ORDER BY last_order_ts DESC NULLS LAST
+                LIMIT $2 OFFSET $3
+            `;
+            const { rows: r } = await pool.query(sql, [searchTerm, lim, off]);
             rows = r;
         }
+
+        // toUiProduct ignores last_order_ts, which is fine; we only use it for sorting
         res.json(rows.map(toUiProduct));
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -157,14 +170,20 @@ app.get("/api/products/:id", async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
-// ---------------------- admin upsert "product" ----------------------
-// Instead of a no-op, treat this as a synthetic "admin order" that seeds
-// product rows into the existing normalized tables. No new tables needed.
-//
-app.post("/api/products", async (req, res) => {
-    const { product_id, sku, title, price, quantity } = req.body || {};
 
-    // Prefer product_id; fall back to sku for backwards compatibility
+// ---------------------- admin seed product ----------------------
+// ---------------------- admin seed product ----------------------
+app.post("/api/products", async (req, res) => {
+    const {
+        product_id,
+        sku,
+        title,
+        price,
+        quantity,
+        seller_id,
+        admin_id,
+    } = req.body || {};
+
     const rawPid =
         (product_id && String(product_id).trim()) ||
         (sku && String(sku).trim()) ||
@@ -174,12 +193,14 @@ app.post("/api/products", async (req, res) => {
         return res.status(400).json({ error: "product_id required (or sku)" });
     }
 
-    const productId = rawPid.slice(0, 32); // keep your 32-char limit
+    const productId = rawPid.slice(0, 32);
     const qty = Math.max(1, parseInt(quantity ?? 1, 10) || 1);
     const unitPrice = price != null ? Number(price) : 0;
 
     if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-        return res.status(400).json({ error: "price must be a non-negative number" });
+        return res
+            .status(400)
+            .json({ error: "price must be a non-negative number" });
     }
 
     const hasCore = await tableExists("order_items_core");
@@ -191,11 +212,27 @@ app.post("/api/products", async (req, res) => {
         });
     }
 
+    // ---- NEW: Identity wiring ----
+    const DEFAULT_ADMIN_ID = "admin_seed_product_0000000000000";
+    const DEFAULT_SELLER_ID = "seller000000000000000000000000";
+
+    const rawAdminId =
+        admin_id && String(admin_id).trim().length
+            ? String(admin_id).trim()
+            : null;
+    const rawSellerId =
+        seller_id && String(seller_id).trim().length
+            ? String(seller_id).trim()
+            : null;
+
+    // Use admin_id as customer_id in orders_header
+    const customerId = (rawAdminId || DEFAULT_ADMIN_ID).slice(0, 32);
+    // Use seller_id in order_items_core.seller_id
+    const sellerId = (rawSellerId || DEFAULT_SELLER_ID).slice(0, 32);
+
     const orderId = crypto.randomBytes(16).toString("hex");
-    const customerId = "admin_seed_product_0000000000000";
     const orderStatus = "seed";
 
-    const DEFAULT_SELLER_ID = "seller000000000000000000000000";
     const DEFAULT_FREIGHT_PER_ITEM = 0;
 
     const t0 = process.hrtime.bigint();
@@ -219,7 +256,7 @@ app.post("/api/products", async (req, res) => {
             await pool.query(
                 `INSERT INTO order_items_core (order_id, order_item_id, product_id, seller_id)
                  VALUES ($1, $2, $3, $4)`,
-                [orderId, orderItemId, productId, DEFAULT_SELLER_ID]
+                [orderId, orderItemId, productId, sellerId]
             );
 
             await pool.query(
@@ -280,8 +317,6 @@ app.post("/api/products", async (req, res) => {
 });
 
 
-
-
 // ---------------------- SQL command console ----------------------
 app.post("/api/postgres/query", async (req, res) => {
     const q = String(req.body?.query || "");
@@ -295,9 +330,8 @@ app.post("/api/postgres/query", async (req, res) => {
         const t1 = process.hrtime.bigint();
         const dbMs = Number(t1 - t0) / 1e6;
 
-        // IMPORTANT: wrap in { result: ... } to match commands.html
         res.json({
-            result,  // pg result object, includes .rows
+            result,
             dbMs
         });
     } catch (e) {
@@ -307,9 +341,7 @@ app.post("/api/postgres/query", async (req, res) => {
     }
 });
 
-
-
-// ---------------------- checkout -> insert normalized rows + Mongo sync ----------------------
+// ---------------------- checkout ----------------------
 app.post("/api/orders", async (req, res) => {
     const items = Array.isArray(req.body?.items) ? req.body.items : [];
     if (!items.length) return res.status(400).json({ error: "items required" });
@@ -420,7 +452,7 @@ app.get("/api/reviews/:productId", async (req, res) => {
         const limit = parseInt(req.query.limit || 10, 10);
         const offset = parseInt(req.query.offset || 0, 10);
 
-        const source = await pickProductSource(); // Reuse your helper to check normalized vs. staging
+        const source = await pickProductSource();
 
         let query, params;
         if (source === "normalized") {
@@ -438,7 +470,6 @@ app.get("/api/reviews/:productId", async (req, res) => {
             `;
             params = [productId, limit, offset];
         } else if (source === "staging") {
-            // Fallback to flat orders table
             query = `
                 SELECT review_id, order_id, review_score, review_creation_date, review_answer_timestamp,
                        review_comment_title, review_comment_message
@@ -471,9 +502,28 @@ app.get("/api/reviews/:productId", async (req, res) => {
     }
 });
 
+// ---------------------- Get Monthly Stats for Product (Using MV) ----------------------
+app.get("/api/monthly-stats/:productId", async (req, res) => {
+    try {
+        const productId = String(req.params.productId).slice(0, 32);
+
+        // NOTE: no date filter here; returns all months in MV for that product
+        const { rows } = await pool.query(
+            `SELECT *
+             FROM mv_product_monthly_stats
+             WHERE product_id = $1
+             ORDER BY order_month ASC`,
+            [productId]
+        );
+
+        res.json({ stats: rows });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
 // ---------------------- start server ----------------------
 app.listen(PORT, () => {
     console.log(`SQL API listening on http://localhost:${PORT}`);
 });
-
-

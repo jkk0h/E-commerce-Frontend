@@ -17,6 +17,14 @@ if (!mongoDb) {
     process.exit(1);
 }
 
+// ✅ Ensure an index that supports "product + date" range queries.
+// Mongo uses B-tree indexes under the hood (similar to B+ trees),
+// so this compound index makes `$match` on product_id + date highly efficient.
+await mongoDb.collection("orders").createIndex(
+    { product_id: 1, review_creation_date: 1 },
+    { name: "idx_orders_product_reviewDate" }
+);
+
 // simple helper to measure DB time in ms (like your SQL server)
 async function timeDb(fn) {
     const t0 = process.hrtime.bigint();
@@ -101,7 +109,14 @@ app.get("/api/products/:id", async (req, res) => {
 // admin "create product" in Mongo mode: also records an admin order in `orders`
 app.post("/api/products", async (req, res) => {
     try {
-        const { product_id, title, price, quantity } = req.body || {};
+        const {
+            product_id,
+            title,
+            price,
+            quantity,
+            seller_id,
+            admin_id,
+        } = req.body || {};
 
         if (!product_id) {
             return res.status(400).json({ error: "product_id required" });
@@ -116,9 +131,24 @@ app.post("/api/products", async (req, res) => {
 
         const qty = Math.max(1, parseInt(quantity ?? 1, 10) || 1);
 
+        // ---- NEW: Identity wiring ----
+        const DEFAULT_ADMIN_ID = "admin_seed";
+        const DEFAULT_SELLER_ID = "seller_seed";
+
+        const rawAdminId =
+            admin_id && String(admin_id).trim().length
+                ? String(admin_id).trim()
+                : null;
+        const rawSellerId =
+            seller_id && String(seller_id).trim().length
+                ? String(seller_id).trim()
+                : null;
+
+        const customerId = rawAdminId || DEFAULT_ADMIN_ID;
+        const sellerId = rawSellerId || DEFAULT_SELLER_ID;
+
         // ----- build an "admin order" for the orders collection -----
         const orderId = crypto.randomBytes(16).toString("hex");
-        const customerId = "admin_seed"; // marker so you know it came from admin
         const DEFAULT_FREIGHT_PER_ITEM = 0;
 
         const docs = [];
@@ -133,7 +163,9 @@ app.post("/api/products", async (req, res) => {
                 price: unitPrice,
                 freight_value: DEFAULT_FREIGHT_PER_ITEM,
                 customer_id: customerId,
-                source: "admin",          // 👈 extra flag so you can distinguish later
+                seller_id: sellerId,
+                admin_id: customerId, // mirror SQL semantics
+                source: "admin",
                 created_at: new Date(),
             });
             orderItemId++;
@@ -164,17 +196,18 @@ app.post("/api/products", async (req, res) => {
             );
         });
 
-        const productForUi = {
+        const product = {
             id: product_id,
             product_id,
             title: title || product_id,
             name: title || product_id,
             price: unitPrice,
-            order_count: qty, // delta for this admin action
+            order_count: qty,
         };
 
         res.status(201).json({
-            product: productForUi,
+            ok: true,
+            product,
             orderId,
             total,
             mongoDbMs: dbMs,
@@ -184,6 +217,7 @@ app.post("/api/products", async (req, res) => {
         res.status(400).json({ error: e.message });
     }
 });
+
 
 
 
@@ -296,6 +330,98 @@ app.get("/api/reviews/:productId", async (req, res) => {
     }
 });
 
+// ---------------- Review trend analytics (Mongo aggregation) ----------------
+// Example call:
+//   GET /api/analytics/reviews-trend/abc123
+//   GET /api/analytics/reviews-trend/abc123?granularity=day&from=2017-01-01&to=2017-12-31
+//
+// Returns docs like:
+//   { bucket: "2017-03", avg_score: 4.23, num_reviews: 12, min_score: 1, max_score: 5 }
+
+app.get("/api/analytics/reviews-trend/:productId", async (req, res) => {
+    try {
+        const productId = String(req.params.productId);
+
+        const granularity = req.query.granularity === "day" ? "day" : "month";
+        const dateFormat = granularity === "day" ? "%Y-%m-%d" : "%Y-%m";
+
+        let match = {
+            product_id: productId,
+            review_score: { $ne: null },
+            review_creation_date: { $ne: null }
+        };
+
+        const from = req.query.from ? new Date(req.query.from) : null;
+        const to = req.query.to ? new Date(req.query.to) : null;
+        if (from && !Number.isNaN(from.getTime())) {
+            match.review_creation_date.$gte = from;
+        }
+        if (to && !Number.isNaN(to.getTime())) {
+            match.review_creation_date.$lt = to;
+        }
+
+        const pipeline = [
+            { $match: match },
+
+            // 🔥 convert review_creation_date string -> real Date
+            {
+                $addFields: {
+                    review_creation_date: { $toDate: "$review_creation_date" }
+                }
+            },
+
+            // derive bucket string like 2017-03 or 2017-03-15
+            {
+                $addFields: {
+                    bucket: {
+                        $dateToString: {
+                            format: dateFormat,
+                            date: "$review_creation_date",
+                        },
+                    },
+                },
+            },
+
+            {
+                $group: {
+                    _id: { product_id: "$product_id", bucket: "$bucket" },
+                    avg_score: { $avg: "$review_score" },
+                    num_reviews: { $sum: 1 },
+                    min_score: { $min: "$review_score" },
+                    max_score: { $max: "$review_score" },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    product_id: "$_id.product_id",
+                    bucket: "$_id.bucket",
+                    avg_score: 1,
+                    num_reviews: 1,
+                    min_score: 1,
+                    max_score: 1,
+                },
+            },
+            { $sort: { bucket: 1 } },
+        ];
+
+        const { result, dbMs } = await timeDb(() =>
+            mongoDb.collection("orders").aggregate(pipeline).toArray()
+        );
+
+        res.json({
+            trend: result,
+            mongoDbMs: dbMs,
+            granularity,
+        });
+    } catch (e) {
+        console.error("Mongo aggregation error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+
 // ---------------- MongoDB command console ----------------
 app.post("/api/mongodb/command", async (req, res) => {
     try {
@@ -310,16 +436,30 @@ app.post("/api/mongodb/command", async (req, res) => {
         }
 
         const { result, dbMs } = await timeDb(async () => {
-            const out = await coll[method](...args);
-            if (out && typeof out.toArray === "function") return await out.toArray();
+            // Special case for aggregate so the pipeline is always an array
+            if (method === "aggregate") {
+                const pipeline = Array.isArray(args[0]) ? args[0] : args;
+                return await coll.aggregate(pipeline).toArray();
+            }
+
+            // Default path: find, insertOne, updateOne, etc.
+            const out = await coll[method](...args);   // ✅ spread args
+            if (out && typeof out.toArray === "function") {
+                return await out.toArray();
+            }
             return out;
         });
 
         res.json({ result, dbMs });
     } catch (e) {
+        console.error("Mongo command error:", e);
         res.status(400).json({ error: e.message });
     }
 });
+
+
+
+
 
 // ---------------- keep SQL command endpoint for comparison ----------------
 app.post("/api/postgres/query", async (req, res) => {
