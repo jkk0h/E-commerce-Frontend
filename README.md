@@ -19,11 +19,11 @@ npm install
 This step initializes your PostgreSQL and MongoDB databases with the required demo data. 
 You will need to open the project's root directory in your first PowerShell window.
 1. Set Environment VariablesYou must set the connection details for both databases. Remember to substitute your actual PostgreSQL password and database name.
-   SQLPOSTGRES_URL: $env:POSTGRES_URL = "postgres://postgres:4kfBQKi6B64r%40!A@localhost:5432/shop"
-   DBMONGODB_URI: $env:MONGODB_URI="mongodb://localhost:27017"
-   NameMONGO_DB_NAME: $env:MONGO_DB_NAME="appdb"
-   ⚠️ Note on PostgreSQL URL: The format is postgres://<user>:<password>@<host>:<port>/<db_name>.
-   If your password contains special characters like @ or !, you may need to URL encode them (e.g., @ becomes %40, ! becomes %21). Your example already includes encoding.
+SQLPOSTGRES_URL: $env:POSTGRES_URL = "postgres://postgres:4kfBQKi6B64r%40!A@localhost:5432/shop"
+DBMONGODB_URI: $env:MONGODB_URI="mongodb://localhost:27017"
+NameMONGO_DB_NAME: $env:MONGO_DB_NAME="appdb"
+⚠️ Note on PostgreSQL URL: The format is postgres://<user>:<password>@<host>:<port>/<db_name>.
+If your password contains special characters like @ or !, you may need to URL encode them (e.g., @ becomes %40, ! becomes %21). Your example already includes encoding.
 
 2. Run Seeding ScriptsExecute the seed scripts using the commands defined in your package.json:
 Bash
