@@ -279,15 +279,100 @@ CREATE INDEX idx_order_review_text_core
   ON order_review_text(review_id, order_id);
 
 -- =====================================================================
--- 5) (Optional) Extras
+-- 5) Materialized View for Monthly Product Analytics (Advanced Feature)
+--    Pre-computes complex aggregates for fast reporting.
+--    Based on enriched joins across normalized tables.
 -- =====================================================================
+DROP MATERIALIZED VIEW IF EXISTS mv_product_monthly_stats;
 
--- Example of PostgreSQL auto-increment:
---   Use SERIAL (or IDENTITY) instead of MySQL AUTO_INCREMENT:
--- CREATE TABLE example_with_identity (
---   audit_id  SERIAL PRIMARY KEY,
---   created_at TIMESTAMP DEFAULT now()
--- );
+CREATE MATERIALIZED VIEW mv_product_monthly_stats AS
+WITH order_enriched AS (
+  SELECT
+    oh.order_id,
+    oh.customer_id,
+    oh.order_status,
+    -- timestamps
+    ot.order_purchase_timestamp,
+    ot.order_delivered_customer_date,
+    ot.order_estimated_delivery_date,
+    -- item-level
+    oic.product_id,
+    oic.seller_id,
+    oic.order_item_id,
+    -- pricing
+    oip.price,
+    oip.freight_value,
+    -- payments (can be multiple rows per order)
+    opm.payment_type,
+    opm.payment_installments,
+    opa.payment_value,
+    -- reviews (may be 0 or 1 per order)
+    orc.review_score,
+    orc.review_creation_date,
+    ort.review_comment_message,
+    -- derived fields
+    (ot.order_delivered_customer_date - ot.order_estimated_delivery_date) AS delivery_delay_interval,
+    (ot.order_delivered_customer_date > ot.order_estimated_delivery_date) AS is_late
+  FROM orders_header AS oh
+  JOIN orders_timestamps AS ot ON ot.order_id = oh.order_id
+  JOIN order_items_core AS oic ON oic.order_id = oh.order_id
+  JOIN order_item_pricing AS oip ON oip.order_id = oic.order_id
+                                   AND oip.order_item_id = oic.order_item_id
+  LEFT JOIN order_payment_method AS opm
+         ON opm.order_id = oh.order_id
+  LEFT JOIN order_payment_amount AS opa
+         ON opa.order_id = opm.order_id
+        AND opa.payment_sequential = opm.payment_sequential
+  LEFT JOIN order_reviews_core AS orc
+         ON orc.order_id = oh.order_id
+  LEFT JOIN order_review_text AS ort
+         ON ort.order_id = orc.order_id
+        AND ort.review_id = orc.review_id
+)
+SELECT
+  -- grain of the report
+  oe.product_id,
+  DATE_TRUNC('month', oe.order_purchase_timestamp)::DATE AS order_month,  -- Cast to DATE for cleaner storage
+  -- order & item volume
+  COUNT(DISTINCT oe.order_id) AS num_orders,
+  COUNT(*) AS num_items,  -- Assumes one row per item; add quantity if field exists
+  -- revenue / pricing
+  SUM(oe.price) AS gross_merchandise_value,
+  SUM(oe.freight_value) AS total_freight_value,
+  SUM(oe.payment_value) AS total_payment_value,
+  AVG(oe.price) AS avg_item_price,
+  -- reviews
+  AVG(oe.review_score) AS avg_review_score,
+  COUNT(oe.review_score) AS num_reviews,
+  -- delivery performance
+  AVG(
+    EXTRACT(EPOCH FROM oe.delivery_delay_interval) / 86400.0
+  ) AS avg_delivery_delay_days,
+  AVG(
+    CASE WHEN oe.is_late THEN 1.0 ELSE 0.0 END
+  ) AS late_order_ratio,
+  -- payment mix (adjust based on your data's payment_type values)
+  COUNT(*) FILTER (WHERE oe.payment_type = 'credit_card') AS num_payments_credit_card,
+  COUNT(*) FILTER (WHERE oe.payment_type = 'boleto') AS num_payments_boleto,
+  COUNT(*) FILTER (WHERE oe.payment_type = 'voucher') AS num_payments_voucher,
+  COUNT(*) FILTER (WHERE oe.payment_type NOT IN ('credit_card','boleto','voucher')) AS num_payments_other
+FROM order_enriched AS oe
+GROUP BY
+  oe.product_id,
+  DATE_TRUNC('month', oe.order_purchase_timestamp);
+
+-- Indexes for fast queries (e.g., by product and date range)
+CREATE UNIQUE INDEX idx_mv_product_monthly_stats_pk 
+    ON mv_product_monthly_stats (product_id, order_month);
+CREATE INDEX idx_mv_product_monthly_stats_month 
+    ON mv_product_monthly_stats (order_month);
+
+
+-- Example Refresh (run after data changes)
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY mv_product_monthly_stats;  -- Use CONCURRENTLY to avoid locking
+
+-- Refresh command (run after data changes)
+-- REFRESH MATERIALIZED VIEW product_summary_mv;
 
 -- Helpful: ensure stats are up to date after big loads
 ANALYZE;

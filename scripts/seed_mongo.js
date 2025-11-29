@@ -121,22 +121,25 @@ async function main() {
         const docs = ordersRaw.map((r) => {
             const doc = { ...r };
 
-            // Common numeric fields from schema.sql / raw data:
-            // order_item_id, price, freight_value, payment_sequential,
-            // payment_installments, payment_value, review_score
-            if (doc.order_item_id != null)
-                doc.order_item_id = Number(doc.order_item_id);
-            if (doc.price != null) doc.price = Number(doc.price);
-            if (doc.freight_value != null)
-                doc.freight_value = Number(doc.freight_value);
-            if (doc.payment_sequential != null)
-                doc.payment_sequential = Number(doc.payment_sequential);
-            if (doc.payment_installments != null)
-                doc.payment_installments = Number(doc.payment_installments);
-            if (doc.payment_value != null)
-                doc.payment_value = Number(doc.payment_value);
+            // numeric conversions…
             if (doc.review_score != null)
                 doc.review_score = Number(doc.review_score);
+
+            // ✅ convert timestamps to Date
+            if (doc.review_creation_date)
+                doc.review_creation_date = new Date(doc.review_creation_date);
+            if (doc.review_answer_timestamp)
+                doc.review_answer_timestamp = new Date(doc.review_answer_timestamp);
+            if (doc.order_purchase_timestamp)
+                doc.order_purchase_timestamp = new Date(doc.order_purchase_timestamp);
+            if (doc.order_approved_at)
+                doc.order_approved_at = new Date(doc.order_approved_at);
+            if (doc.order_delivered_carrier_date)
+                doc.order_delivered_carrier_date = new Date(doc.order_delivered_carrier_date);
+            if (doc.order_delivered_customer_date)
+                doc.order_delivered_customer_date = new Date(doc.order_delivered_customer_date);
+            if (doc.order_estimated_delivery_date)
+                doc.order_estimated_delivery_date = new Date(doc.order_estimated_delivery_date);
 
             return doc;
         });

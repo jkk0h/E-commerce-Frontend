@@ -17,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const dataDir = path.resolve(projectRoot, "scripts", "data");
-const schemaPath = path.resolve(projectRoot,"scripts","schema.sql");
+const schemaPath = path.resolve(projectRoot, "scripts", "schema.sql");
 
 const POSTGRES_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 if (!POSTGRES_URL) {
@@ -157,7 +157,9 @@ async function insertBatch(table, cols, objs, opts = {}) {
             `VALUES ${placeholders.join(",")} ON CONFLICT DO NOTHING;`;
 
         await pool.query(sql, params);
-        console.log(`[DB] ${table}: inserted ${Math.min(i + batchSize, objs.length)}/${objs.length}`);
+        console.log(
+            `[DB] ${table}: inserted ${Math.min(i + batchSize, objs.length)}/${objs.length}`
+        );
     }
 
     return objs.length;
@@ -174,7 +176,27 @@ async function main() {
             process.exit(1);
         }
 
+        // === Run DDL (schema.sql) ===
         await runDDL();
+
+        // === Check materialized view exists ===
+        try {
+            console.log("[DDL] Checking for materialized view mv_product_monthly_stats ...");
+            const mvRes = await pool.query(`
+                SELECT matviewname
+                FROM pg_matviews
+                WHERE schemaname = 'public'
+                  AND matviewname = 'mv_product_monthly_stats';
+            `);
+
+            if (mvRes.rowCount > 0) {
+                console.log("✅ Materialized View exists: mv_product_monthly_stats");
+            } else {
+                console.log("⚠️  Materialized View NOT found: mv_product_monthly_stats");
+            }
+        } catch (checkErr) {
+            console.error("[DDL] Error while checking materialized view:", checkErr);
+        }
 
         // ---- Basenames only (extension-free) ----
         const names = {
@@ -204,11 +226,15 @@ async function main() {
 
         // === 1) payment_type_dim from payment method ===
         if (orderPaymentMethod.length) {
-            const types = [...new Set(orderPaymentMethod
-                .map(p => (p.payment_type || "").toString().trim())
-                .filter(Boolean))];
+            const types = [
+                ...new Set(
+                    orderPaymentMethod
+                        .map((p) => (p.payment_type || "").toString().trim())
+                        .filter(Boolean)
+                ),
+            ];
             if (types.length) {
-                const rows = types.map(t => ({ payment_type: t }));
+                const rows = types.map((t) => ({ payment_type: t }));
                 await insertBatch("payment_type_dim", ["payment_type"], rows);
                 console.log("[seed] payment_type_dim seeded");
             }
@@ -218,7 +244,7 @@ async function main() {
 
         // === 2) orders_header ===
         if (ordersHeader.length) {
-            const headers = ordersHeader.map(r => ({
+            const headers = ordersHeader.map((r) => ({
                 order_id: r.order_id,
                 customer_id: r.customer_id ?? null,
                 order_status: r.order_status ?? null,
@@ -226,11 +252,13 @@ async function main() {
             await insertBatch("orders_header", ["order_id", "customer_id", "order_status"], headers);
             console.log("[seed] orders_header inserted");
         } else if (ordersCombined.length) {
-            const headers = ordersCombined.map(r => ({
-                order_id: r.order_id,
-                customer_id: r.customer_id ?? null,
-                order_status: r.order_status ?? null,
-            })).filter(x => x.order_id);
+            const headers = ordersCombined
+                .map((r) => ({
+                    order_id: r.order_id,
+                    customer_id: r.customer_id ?? null,
+                    order_status: r.order_status ?? null,
+                }))
+                .filter((x) => x.order_id);
             if (headers.length) {
                 await insertBatch("orders_header", ["order_id", "customer_id", "order_status"], headers);
                 console.log("[seed] orders_header (from orders) inserted");
@@ -251,21 +279,27 @@ async function main() {
             ];
 
             if (ordersTimestamps.length) {
-                const rows = ordersTimestamps.map(r => {
+                const rows = ordersTimestamps.map((r) => {
                     const out = {};
                     for (const c of tsCols) out[c] = r[c] ?? null;
                     return out;
                 });
-                await insertBatch("orders_timestamps", tsCols, rows, { dates: new Set(tsCols.slice(1)) });
+                await insertBatch("orders_timestamps", tsCols, rows, {
+                    dates: new Set(tsCols.slice(1)),
+                });
                 console.log("[seed] orders_timestamps inserted");
             } else if (ordersCombined.length) {
-                const rows = ordersCombined.map(r => {
-                    const out = {};
-                    for (const c of tsCols) out[c] = r[c] ?? null;
-                    return out;
-                }).filter(x => x.order_id);
+                const rows = ordersCombined
+                    .map((r) => {
+                        const out = {};
+                        for (const c of tsCols) out[c] = r[c] ?? null;
+                        return out;
+                    })
+                    .filter((x) => x.order_id);
                 if (rows.length) {
-                    await insertBatch("orders_timestamps", tsCols, rows, { dates: new Set(tsCols.slice(1)) });
+                    await insertBatch("orders_timestamps", tsCols, rows, {
+                        dates: new Set(tsCols.slice(1)),
+                    });
                     console.log("[seed] orders_timestamps (from orders) inserted");
                 }
             } else {
@@ -276,7 +310,7 @@ async function main() {
         // === 4) order items: core + pricing + shipping ===
         if (orderItemCore.length) {
             const coreCols = ["order_id", "order_item_id", "product_id", "seller_id"];
-            const coreRows = orderItemCore.map(r => ({
+            const coreRows = orderItemCore.map((r) => ({
                 order_id: r.order_id,
                 order_item_id: r.order_item_id,
                 product_id: r.product_id,
@@ -290,13 +324,15 @@ async function main() {
 
         if (orderItemPricing.length) {
             const priceCols = ["order_id", "order_item_id", "price", "freight_value"];
-            const priceRows = orderItemPricing.map(r => ({
+            const priceRows = orderItemPricing.map((r) => ({
                 order_id: r.order_id,
                 order_item_id: r.order_item_id,
                 price: r.price == null ? null : r.price,
                 freight_value: r.freight_value == null ? null : r.freight_value,
             }));
-            await insertBatch("order_item_pricing", priceCols, priceRows, { floats: new Set(["price", "freight_value"]) });
+            await insertBatch("order_item_pricing", priceCols, priceRows, {
+                floats: new Set(["price", "freight_value"]),
+            });
             console.log("[seed] order_item_pricing inserted");
         } else {
             console.log("[seed] order_item_pricing missing/empty");
@@ -304,12 +340,14 @@ async function main() {
 
         if (orderItemShipping.length) {
             const shipCols = ["order_id", "order_item_id", "shipping_limit_date"];
-            const shipRows = orderItemShipping.map(r => ({
+            const shipRows = orderItemShipping.map((r) => ({
                 order_id: r.order_id,
                 order_item_id: r.order_item_id,
                 shipping_limit_date: r.shipping_limit_date ?? null,
             }));
-            await insertBatch("order_item_shipping", shipCols, shipRows, { dates: new Set(["shipping_limit_date"]) });
+            await insertBatch("order_item_shipping", shipCols, shipRows, {
+                dates: new Set(["shipping_limit_date"]),
+            });
             console.log("[seed] order_item_shipping inserted");
         } else {
             console.log("[seed] order_item_shipping missing/empty");
@@ -318,13 +356,19 @@ async function main() {
         // === 5) payments: method and amount ===
         if (orderPaymentMethod.length) {
             const methodCols = ["order_id", "payment_sequential", "payment_type", "payment_installments"];
-            const methodRows = orderPaymentMethod.map(r => ({
+            const methodRows = orderPaymentMethod.map((r) => ({
                 order_id: r.order_id,
-                payment_sequential: r.payment_sequential ? parseInt(r.payment_sequential, 10) : 1,
+                payment_sequential: r.payment_sequential
+                    ? parseInt(r.payment_sequential, 10)
+                    : 1,
                 payment_type: r.payment_type,
-                payment_installments: r.payment_installments ? parseInt(r.payment_installments, 10) : 1,
+                payment_installments: r.payment_installments
+                    ? parseInt(r.payment_installments, 10)
+                    : 1,
             }));
-            await insertBatch("order_payment_method", methodCols, methodRows, { ints: new Set(["payment_sequential", "payment_installments"]) });
+            await insertBatch("order_payment_method", methodCols, methodRows, {
+                ints: new Set(["payment_sequential", "payment_installments"]),
+            });
             console.log("[seed] order_payment_method inserted");
         } else {
             console.log("[seed] order_payment_method missing/empty");
@@ -332,9 +376,11 @@ async function main() {
 
         if (orderPaymentAmount.length) {
             const amountCols = ["order_id", "payment_sequential", "payment_value"];
-            const amountRows = orderPaymentAmount.map(r => ({
+            const amountRows = orderPaymentAmount.map((r) => ({
                 order_id: r.order_id,
-                payment_sequential: r.payment_sequential ? parseInt(r.payment_sequential, 10) : 1,
+                payment_sequential: r.payment_sequential
+                    ? parseInt(r.payment_sequential, 10)
+                    : 1,
                 payment_value: r.payment_value == null ? null : parseFloat(r.payment_value),
             }));
             await insertBatch("order_payment_amount", amountCols, amountRows, {
@@ -348,8 +394,14 @@ async function main() {
 
         // === 6) reviews: core + text ===
         if (orderReviewCore.length) {
-            const coreCols = ["review_id", "order_id", "review_score", "review_creation_date", "review_answer_timestamp"];
-            const coreRows = orderReviewCore.map(r => ({
+            const coreCols = [
+                "review_id",
+                "order_id",
+                "review_score",
+                "review_creation_date",
+                "review_answer_timestamp",
+            ];
+            const coreRows = orderReviewCore.map((r) => ({
                 review_id: r.review_id,
                 order_id: r.order_id,
                 review_score: r.review_score == null ? null : parseInt(r.review_score, 10),
@@ -366,8 +418,13 @@ async function main() {
         }
 
         if (orderReviewText.length) {
-            const textCols = ["review_id", "order_id", "review_comment_title", "review_comment_message"];
-            const textRows = orderReviewText.map(r => ({
+            const textCols = [
+                "review_id",
+                "order_id",
+                "review_comment_title",
+                "review_comment_message",
+            ];
+            const textRows = orderReviewText.map((r) => ({
                 review_id: r.review_id,
                 order_id: r.order_id,
                 review_comment_title: r.review_comment_title ?? null,
@@ -379,12 +436,25 @@ async function main() {
             console.log("[seed] order_review_text missing/empty");
         }
 
+        // === Refresh materialized view AFTER all data is loaded ===
+        try {
+            console.log("[seed] Refreshing mv_product_monthly_stats ...");
+            const t0 = Date.now();
+            await pool.query("REFRESH MATERIALIZED VIEW mv_product_monthly_stats;");
+            const t1 = Date.now();
+            console.log(`[seed] mv_product_monthly_stats refreshed in ${t1 - t0} ms`);
+        } catch (e) {
+            console.error("[seed] Failed to refresh mv_product_monthly_stats:", e.message);
+        }
+
         console.log("[seed] All done. Inspect pgAdmin4 to verify table rows.");
         await pool.end();
         process.exit(0);
     } catch (err) {
         console.error("[seed] Error:", err);
-        try { await pool.end(); } catch { }
+        try {
+            await pool.end();
+        } catch { }
         process.exit(2);
     }
 }
