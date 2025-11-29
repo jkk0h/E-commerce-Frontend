@@ -22,7 +22,8 @@ You will need to open the project's root directory in your first PowerShell wind
 SQLPOSTGRES_URL: $env:POSTGRES_URL = "postgres://postgres:4kfBQKi6B64r%40!A@localhost:5432/shop"
 DBMONGODB_URI: $env:MONGODB_URI="mongodb://localhost:27017"
 NameMONGO_DB_NAME: $env:MONGO_DB_NAME="appdb"
-⚠️ Note on PostgreSQL URL: The format is postgres://<user>:<password>@<host>:<port>/<db_name>.
+
+Note on PostgreSQL URL: The format is postgres://<user>:<password>@<host>:<port>/<db_name>.
 If your password contains special characters like @ or !, you may need to URL encode them (e.g., @ becomes %40, ! becomes %21). Your example already includes encoding.
 
 2. Run Seeding ScriptsExecute the seed scripts using the commands defined in your package.json:
@@ -33,7 +34,7 @@ npm run seed:mongo
 
 🚀 Step 2: Start Backend APIs (PowerShell 2 & 3)
 You need to open two new PowerShell windows, one for the SQL API and one for the NoSQL API.
-⚠️ IMPORTANT: In both PowerShell windows, you must first re-set the environment variables from Step 1 before running the API servers.
+IMPORTANT: In both PowerShell windows, you must first re-set the environment variables from Step 1 before running the API servers.
 1. Start SQL API Server (PowerShell 2)
 Open a Second PowerShell window, set the environment variables, and run the SQL API:
 Bash
